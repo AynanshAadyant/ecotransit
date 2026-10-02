@@ -8,18 +8,24 @@
     "services/javascript/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "tsc -b",
     "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "tsc -b --dry",
-    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules"
+    "test:infra": "tsx --test test/**/*.test.ts",
+    "test:phase0": "tsx --test test/**/*.test.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "migrate": "tsx database/migrate.ts",
+    "clean": "npm run clean --workspaces --if-present && rimraf node_modules"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
-    "typescript": "^5.5.4",
+    "dotenv": "^18.0.5",
     "eslint": "^9.9.0",
     "prettier": "^3.3.3",
-    "rimraf": "^6.0.1"
+    "rimraf": "^6.0.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.71.0"
   },
   "engines": {
     "node": ">=20.0.0",

@@ -1,0 +1,81 @@
+openapi: 3.0.3
+info:
+  title: EcoTransit API Gateway Service
+  version: 1.0.0
+  description: Commuter-facing REST API & spatial query service
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+  /api/vehicles/live:
+    get:
+      summary: Get all active live vehicles
+      responses:
+        '200':
+          description: List of active live vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehiclePosition'
+  /api/eta/{vehicleId}:
+    get:
+      summary: Get ETA for vehicle to target stop
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stopId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ETA calculation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EtaResult'
+components:
+  schemas:
+    VehiclePosition:
+      type: object
+      properties:
+        vehicleId:
+          type: string
+        routeId:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        speed:
+          type: number
+        bearing:
+          type: number
+        timestamp:
+          type: integer
+    EtaResult:
+      type: object
+      properties:
+        etaSeconds:
+          type: number
+        varianceTotal:
+          type: number
+        weakestCellSupport:
+          type: integer

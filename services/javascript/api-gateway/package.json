@@ -1,0 +1,24 @@
+{
+  "name": "@ecotransit/api-gateway",
+  "version": "1.0.0",
+  "description": "EcoTransit API Gateway Service",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ecotransit/contracts": "*",
+    "@ecotransit/core-utils": "*",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.0",
+    "typescript": "^5.5.4"
+  }
+}
