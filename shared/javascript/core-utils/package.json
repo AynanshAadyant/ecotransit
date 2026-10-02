@@ -1,0 +1,31 @@
+{
+  "name": "@ecotransit/core-utils",
+  "version": "1.0.0",
+  "description": "Core cross-cutting utilities (errors, logging, config, time, http) for EcoTransit",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ecotransit/contracts": "*",
+    "pino": "^9.3.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.0",
+    "express": "^4.19.2",
+    "typescript": "^5.5.4"
+  },
+  "peerDependencies": {
+    "express": "^4.19.2"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
+  }
+}

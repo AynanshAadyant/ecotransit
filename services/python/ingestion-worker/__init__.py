@@ -1,0 +1,1 @@
+"""EcoTransit Ingestion Worker Service."""

@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TelemetryBatchFrame",
+  "description": "Language-neutral JSON schema for real-time WebSocket / Socket.IO broadcast frames",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "integer",
+      "description": "Epoch seconds timestamp of broadcast frame creation"
+    },
+    "frame_type": {
+      "type": "string",
+      "enum": ["full", "delta"],
+      "description": "Full snapshot or delta update"
+    },
+    "vehicles": {
+      "type": "array",
+      "items": {
+        "$ref": "./vehicle_position.schema.json"
+      }
+    }
+  },
+  "required": ["timestamp", "frame_type", "vehicles"]
+}

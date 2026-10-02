@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "shared/javascript/contracts" },
+    { "path": "shared/javascript/core-utils" },
+    { "path": "shared/javascript/auth" },
+    { "path": "shared/javascript/data-access" },
+    { "path": "services/javascript/api-gateway" }
+  ]
+}

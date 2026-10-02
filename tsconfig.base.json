@@ -28,16 +28,15 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
-    "baseUrl": ".",
     "paths": {
-      "@ecotransit/contracts": ["shared/javascript/contracts/src/index.ts"],
-      "@ecotransit/contracts/*": ["shared/javascript/contracts/src/*"],
-      "@ecotransit/core-utils": ["shared/javascript/core-utils/src/index.ts"],
-      "@ecotransit/core-utils/*": ["shared/javascript/core-utils/src/*"],
-      "@ecotransit/auth": ["shared/javascript/auth/src/index.ts"],
-      "@ecotransit/auth/*": ["shared/javascript/auth/src/*"],
-      "@ecotransit/data-access": ["shared/javascript/data-access/src/index.ts"],
-      "@ecotransit/data-access/*": ["shared/javascript/data-access/src/*"]
+      "@ecotransit/contracts": ["./shared/javascript/contracts/src/index.ts"],
+      "@ecotransit/contracts/*": ["./shared/javascript/contracts/src/*"],
+      "@ecotransit/core-utils": ["./shared/javascript/core-utils/src/index.ts"],
+      "@ecotransit/core-utils/*": ["./shared/javascript/core-utils/src/*"],
+      "@ecotransit/auth": ["./shared/javascript/auth/src/index.ts"],
+      "@ecotransit/auth/*": ["./shared/javascript/auth/src/*"],
+      "@ecotransit/data-access": ["./shared/javascript/data-access/src/index.ts"],
+      "@ecotransit/data-access/*": ["./shared/javascript/data-access/src/*"]
     }
   },
   "exclude": [
