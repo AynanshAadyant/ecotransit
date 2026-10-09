@@ -315,14 +315,15 @@ async def test_scenario_delhi_otd_client_dynamic_key_handling() -> None:
 
     mock_http = MagicMock()
     mock_http.get = AsyncMock(return_value=mock_response)
+    mock_http.head = AsyncMock(return_value=MagicMock(status_code=200))
     mock_http.is_closed = False
 
     # 1. Without API key
     client_no_key = DelhiOtdFeedClient(feed_url="https://otd.test/feed.pb", client=mock_http)
     await client_no_key.fetch_feed()
     call_args_no_key = mock_http.get.call_args
-    assert "x-api-key" not in call_args_no_key.kwargs["headers"]
-    assert "key" not in call_args_no_key.kwargs["params"]
+    assert call_args_no_key.args[0] == "https://otd.test/feed.pb"
+    assert "key=" not in call_args_no_key.args[0]
 
     # 2. With API key
     client_with_key = DelhiOtdFeedClient(
@@ -330,5 +331,10 @@ async def test_scenario_delhi_otd_client_dynamic_key_handling() -> None:
     )
     await client_with_key.fetch_feed()
     call_args_with_key = mock_http.get.call_args
-    assert call_args_with_key.kwargs["headers"]["x-api-key"] == "secret_delhi_key"
-    assert call_args_with_key.kwargs["params"]["key"] == "secret_delhi_key"
+    assert call_args_with_key.args[0] == "https://otd.test/feed.pb?key=secret_delhi_key"
+
+    # 3. Verify ping headers and params injection
+    assert await client_with_key.ping() is True
+    head_args = mock_http.head.call_args
+    assert head_args.kwargs["headers"]["x-api-key"] == "secret_delhi_key"
+    assert head_args.kwargs["params"]["key"] == "secret_delhi_key"

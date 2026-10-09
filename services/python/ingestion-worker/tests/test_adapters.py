@@ -92,6 +92,7 @@ async def test_delhi_otd_feed_client_adapter_headers_and_retries() -> None:
 
     mock_http_client = MagicMock()
     mock_http_client.get = AsyncMock(return_value=mock_response)
+    mock_http_client.head = AsyncMock(return_value=MagicMock(status_code=200))
     mock_http_client.is_closed = False
 
     client = DelhiOtdFeedClient(
@@ -103,11 +104,14 @@ async def test_delhi_otd_feed_client_adapter_headers_and_retries() -> None:
     data = await client.fetch_feed()
     assert data == b"fake_proto_bytes"
 
-    # Verify header and param injection
+    # Verify URL query key injection on fetch_feed
     mock_http_client.get.assert_called_once()
     call_args = mock_http_client.get.call_args
-    headers = call_args.kwargs.get("headers", {})
-    params = call_args.kwargs.get("params", {})
+    assert call_args.args[0] == "https://otd.test.endpoint/feed.pb?key=secret_test_key_123"
 
-    assert headers.get("x-api-key") == "secret_test_key_123"
-    assert params.get("key") == "secret_test_key_123"
+    # Verify header and query param injection on ping
+    assert await client.ping() is True
+    mock_http_client.head.assert_called_once()
+    head_args = mock_http_client.head.call_args
+    assert head_args.kwargs["headers"]["x-api-key"] == "secret_test_key_123"
+    assert head_args.kwargs["params"]["key"] == "secret_test_key_123"

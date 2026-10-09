@@ -21,6 +21,7 @@ from ecotransit_shared.db import (
     vehicle_geo_key,
     vehicle_live_key,
 )
+from ecotransit_shared.logging import create_logger
 
 
 @pytest.mark.asyncio
@@ -55,6 +56,7 @@ async def test_e2e_live_ingestion_pipeline() -> None:
         settings=settings,
         redis_client=redis_client,
         db_pool=db_pool,
+        logger=create_logger("test-e2e-ingestion"),
         custom_feed_client=mock_feed,
     )
 

@@ -67,15 +67,13 @@ class DelhiOtdFeedClient(IOTDFeedClient):
         return headers, params
 
     async def fetch_feed(self) -> bytes:
-        headers, params = self._build_request_params()
         url = self._feed_url + ("?key=" + self._api_key if self._api_key else "")
         last_exception: Exception | None = None
 
         for attempt in range(1, self._max_retries + 1):
             try:
                 response = await self._client.get(
-                    url,
-
+                    url
                 )
                 response.raise_for_status()
                 return response.content
