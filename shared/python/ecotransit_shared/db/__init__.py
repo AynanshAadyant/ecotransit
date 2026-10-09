@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from config import DatabaseSettings, RedisSettings
 
 # --- Shared Redis Key Builders ---
 
@@ -51,7 +52,8 @@ async def create_postgres_pool(
         import asyncpg
     except ImportError as e:
         raise ImportError("asyncpg is required to create a postgres pool. Run 'pip install asyncpg'.") from e
-
+    except Exception as e:
+        raise ImportError("An unexpected error occurred while importing asyncpg.") from e
     return await asyncpg.create_pool(
         dsn=dsn,
         min_size=min_size,
@@ -67,12 +69,14 @@ def create_redis_client(
 ) -> Any:
     """Creates an asynchronous Redis client instance."""
     try:
-        import redis.asyncio as aioredis
+        import redis.asyncio as redis
     except ImportError as e:
-        raise ImportError("redis is required to create a redis client. Run 'pip install redis'.") from e
+        raise ImportError("redis is required to create a redis client. Run 'pip install redis'.") from e    
+    except Exception as e:
+        raise ImportError("An unexpected error occurred while importing redis.asyncio.") from e
 
-    return aioredis.from_url(
-        url,
+    return redis.from_url(
+        url=url,
         decode_responses=decode_responses,
         **kwargs,
     )

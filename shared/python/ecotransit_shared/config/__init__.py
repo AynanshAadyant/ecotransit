@@ -4,15 +4,20 @@ from __future__ import annotations
 
 from urllib.parse import quote_plus
 
+from dotenv import find_dotenv, load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_dotenv_path = find_dotenv()
+if _dotenv_path:
+    load_dotenv(_dotenv_path, override=False)
 
 
 class DatabaseSettings(BaseSettings):
     """PostgreSQL database configuration."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_dotenv_path or ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -34,7 +39,7 @@ class RedisSettings(BaseSettings):
     """Redis cache and live position configuration."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_dotenv_path or ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -55,7 +60,7 @@ class CommonSettings(BaseSettings):
     """Common application configuration."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_dotenv_path or ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )

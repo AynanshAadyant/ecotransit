@@ -1,0 +1,16 @@
+{
+  "include": [
+    "shared/python",
+    "services/python"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "dist",
+    "otd_data"
+  ],
+  "extraPaths": [
+    "shared/python",
+    "services/python/ingestion-worker"
+  ]
+}
