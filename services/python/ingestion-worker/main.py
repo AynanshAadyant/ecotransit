@@ -118,11 +118,11 @@ async def main_async() -> int:
         logger.info("Database and cache connections initialized successfully.")
         engine = build_engine(settings, redis_client=redis_client, db_pool=db_pool, logger=logger)
         stop_event = asyncio.Event()
-        
+
         def handle_signal() -> None:
             logger.info("Received termination signal. Stopping ingestion engine...")
             stop_event.set()
-    
+
         loop = asyncio.get_running_loop()
         if sys.platform != "win32":
             for sig in (signal.SIGINT, signal.SIGTERM):
@@ -143,7 +143,7 @@ async def main_async() -> int:
             "Runner task created: %s, done=%s",
             runner_task,
             runner_task.done(),
-        )        
+        )
         logger.info("Ingestion engine started. Running until stopped or task completes.")
         try:
             # Run until stopped or task completes
@@ -152,9 +152,9 @@ async def main_async() -> int:
                 try:
                     await runner_task
                 except Exception:
-                    logger.exception("Ingestion engine task crashed")                
+                    logger.exception("Ingestion engine task crashed")
                 logger.info("Runner task completed. Stopping ingestion engine...")
-            else:       
+            else:
                 await stop_event.wait()
                 await engine.stop()
                 await runner_task
@@ -165,7 +165,7 @@ async def main_async() -> int:
             await redis_client.aclose() if hasattr(redis_client, "aclose") else redis_client.close()
             await db_pool.close()
             logger.info("Shutdown complete.")
-    
+
     except Exception as e:
         logger.error(f"Failed to initialize database or cache connections: {e}")
     return 0

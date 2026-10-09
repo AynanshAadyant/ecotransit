@@ -14,8 +14,9 @@ from metrics import IMetricsRecorder
 from validation.chain import ValidationChain
 
 from ecotransit_shared.contracts.ingestion import IParser, ISink, ISource
-from ecotransit_shared.schemas import RawPayload, ValidationContext, VehiclePosition
 from ecotransit_shared.logging import create_logger  # noqa: E402
+from ecotransit_shared.schemas import RawPayload, ValidationContext, VehiclePosition
+
 logger = create_logger("ingestion-engine")
 
 
