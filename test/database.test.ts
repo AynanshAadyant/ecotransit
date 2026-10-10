@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createPool, BaseRepository } from '@ecotransit/data-access';
-import { AppError, ConflictError, ValidationError } from '@ecotransit/core-utils';
+import { ConflictError } from '@ecotransit/core-utils';
 import type { Pool, PoolClient } from 'pg';
 
 const __filename = fileURLToPath(import.meta.url);

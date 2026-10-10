@@ -10,6 +10,8 @@
     "clean": "rimraf dist tsconfig.tsbuildinfo",
     "start": "node dist/index.js",
     "test": "tsx --test tests/**/*.test.ts",
+    "lint": "eslint src tests --max-warnings 0",
+    "lint:fix": "eslint src tests --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { SystemClock, NotFoundError, AppError } from '@ecotransit/core-utils';
+import { SystemClock, NotFoundError } from '@ecotransit/core-utils';
 import {
   MockLivePositionRepository,
   MockStopRepository,

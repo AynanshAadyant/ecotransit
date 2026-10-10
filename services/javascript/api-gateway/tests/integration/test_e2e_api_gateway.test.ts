@@ -4,6 +4,8 @@ import http from 'http';
 import { AddressInfo } from 'net';
 import { Server as SocketIOServer } from 'socket.io';
 import { io as ClientSocket, Socket as ClientSocketType } from 'socket.io-client';
+import type { Pool } from 'pg';
+import type { RedisClientType } from 'redis';
 import { SystemClock } from '@ecotransit/core-utils';
 import {
   MockLivePositionRepository,
@@ -83,8 +85,8 @@ describe('Integration Test: API Gateway End-to-End REST & Socket.IO', () => {
     const socketGateway = new SocketGateway(io);
     scheduler = new BroadcastScheduler(livePosRepo, socketGateway, 1000, clock);
 
-    const mockPool = { query: async () => ({ rows: [] }) } as any;
-    const mockRedis = { ping: async () => 'PONG' } as any;
+    const mockPool = { query: async () => ({ rows: [] }) } as unknown as Pool;
+    const mockRedis = { ping: async () => 'PONG' } as unknown as RedisClientType;
 
     const container: ServiceContainer = {
       config: {
@@ -101,11 +103,11 @@ describe('Integration Test: API Gateway End-to-End REST & Socket.IO', () => {
       pool: mockPool,
       redisClient: mockRedis,
       clock,
-      livePosRepo: livePosRepo as any,
-      stopRepo: stopRepo as any,
-      routeRepo: routeRepo as any,
-      segmentRepo: segmentRepo as any,
-      matrixRepo: matrixRepo as any,
+      livePosRepo: livePosRepo as unknown as ServiceContainer['livePosRepo'],
+      stopRepo: stopRepo as unknown as ServiceContainer['stopRepo'],
+      routeRepo: routeRepo as unknown as ServiceContainer['routeRepo'],
+      segmentRepo: segmentRepo as unknown as ServiceContainer['segmentRepo'],
+      matrixRepo: matrixRepo as unknown as ServiceContainer['matrixRepo'],
       stopService,
       routeService,
       vehicleService,
@@ -142,7 +144,7 @@ describe('Integration Test: API Gateway End-to-End REST & Socket.IO', () => {
   it('should respond to GET /api/health with healthy status', async () => {
     const res = await fetch(`${baseUrl}/api/health`);
     assert.equal(res.status, 200);
-    const body = (await res.json()) as any;
+    const body = (await res.json()) as { status: string; details: { service: string } };
     assert.equal(body.status, 'healthy');
     assert.equal(body.details.service, 'api-gateway');
   });
@@ -150,18 +152,19 @@ describe('Integration Test: API Gateway End-to-End REST & Socket.IO', () => {
   it('should return nearby stops on GET /api/stops/nearby', async () => {
     const res = await fetch(`${baseUrl}/api/stops/nearby?lat=28.6665&lon=77.23&radius=1000`);
     assert.equal(res.status, 200);
-    const stops = (await res.json()) as any[];
+    const stops = (await res.json()) as Array<{ stopId: string }>;
     assert.ok(Array.isArray(stops));
     assert.equal(stops.length, 1);
-    assert.equal(stops[0].stopId, 'STOP_101');
+    assert.equal(stops[0]?.stopId, 'STOP_101');
   });
 
   it('should list all live vehicles on GET /api/vehicles/live', async () => {
     const res = await fetch(`${baseUrl}/api/vehicles/live`);
     assert.equal(res.status, 200);
-    const vehicles = (await res.json()) as any[];
+    const vehicles = (await res.json()) as Array<{ vehicleId: string }>;
+    assert.ok(Array.isArray(vehicles));
     assert.equal(vehicles.length, 1);
-    assert.equal(vehicles[0].vehicleId, 'DL1PC8888');
+    assert.equal(vehicles[0]?.vehicleId, 'DL1PC8888');
   });
 
   it('should establish Socket.IO client connection and receive telemetry_frame', async () => {
