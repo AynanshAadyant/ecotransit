@@ -48,8 +48,10 @@ Based on `IMPLEMENTATION_GUIDE.md` §12.
 - [x] Validation chain (`ValidationChain`, `CoordinateBoundsRule`, `SpeedPlausibilityRule`, `TimestampFreshnessRule`, `DuplicatePingRule`)
 - [x] Sinks (`RedisPositionSink` with 45s TTL/GEO/route sets, `PostgresArchiveSink` with batch archive, `FanOutSink`)
 - [x] Ingestion Engine with dual size & timer flush (`IngestionEngine`, `ParserRegistry`, metrics)
+- [x] Production composition root (`services/python/ingestion-worker/main.py`)
 - [x] Appendix A tooling (`otd_collector.py`, `combine_otd_snapshots.py` 6-stage cleaning pipeline)
-- [x] Comprehensive test suite (38 tests)
+- [x] Comprehensive test suite (38 tests: unit, integration, custom scenarios, and failure mode graceful degradation)
+- [x] Service README documentation (`services/python/ingestion-worker/README.md`, `services/javascript/api-gateway/README.md`)
 
 ## Phase 3: Ingestion Worker - MQTT & Multi-Source [PENDING]
 - [ ] MQTT source & JSON parser registration without engine alteration
