@@ -4,6 +4,7 @@ import type { TimeBucket } from './common.js';
 export interface Stop {
   stopId: string;
   stopName: string;
+  displayName?: string | undefined;
   latitude: number;
   longitude: number;
   clusterId?: string | undefined;
@@ -59,6 +60,15 @@ export interface GetVehicleEtaQuery {
   targetStopId: string;
 }
 
+export interface DirectJourneyResult {
+  route: RouteSummary;
+  originStop: Stop;
+  destinationStop: Stop;
+  originSequence: number;
+  destinationSequence: number;
+  stopsBetween: number;
+}
+
 export interface ILivePositionRepository {
   find(vehicleId: string): Promise<LivePosition | null>;
   findAllLive(): Promise<LivePosition[]>;
@@ -83,6 +93,24 @@ export interface IRouteSegmentRepository {
 
 export interface IStopRepository {
   findNearby(lat: number, lon: number, radiusM: number): Promise<Stop[]>;
-  findNearestOnRoute(routeId: string, lat: number, lon: number): Promise<NearestStopResult>;
+  findNearestOnRoute(
+    routeId: string,
+    lat: number,
+    lon: number,
+    bearing?: number,
+  ): Promise<NearestStopResult>;
   findRoutesServingStop(stopId: string): Promise<RouteSummary[]>;
+  searchByName(query: string, limit?: number): Promise<Stop[]>;
+  findById(stopId: string): Promise<Stop | null>;
 }
+
+export interface IRouteRepository {
+  findById(routeId: string): Promise<RouteSummary | null>;
+  findAll(): Promise<RouteSummary[]>;
+  findStopsByRoute(routeId: string): Promise<Stop[]>;
+  findDirectJourneys(
+    originStopId: string,
+    destinationStopId: string,
+  ): Promise<DirectJourneyResult[]>;
+}
+
