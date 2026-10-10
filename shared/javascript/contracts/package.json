@@ -2,6 +2,7 @@
   "name": "@ecotransit/contracts",
   "version": "1.0.0",
   "description": "Core TypeScript interfaces and DTO contracts for EcoTransit",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

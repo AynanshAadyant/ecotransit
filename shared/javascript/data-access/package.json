@@ -2,6 +2,7 @@
   "name": "@ecotransit/data-access",
   "version": "1.0.0",
   "description": "PostgreSQL pool, Redis client factory, BaseRepository, and shared key builders for EcoTransit",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
