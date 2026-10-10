@@ -32,7 +32,7 @@ class VehicleService {
             : null
         }
       };
-    } catch (err) { // eslint-disable-line no-unused-vars
+    } catch (err) {  
       return {
         ...vehicle,
         realtime: {

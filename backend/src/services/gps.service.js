@@ -157,7 +157,7 @@ class GpsService {
       if (tripRes.rows.length > 0) {
         activeTripId = tripRes.rows[0].id;
       }
-    } catch (err) { // eslint-disable-line no-unused-vars
+    } catch (err) {  
       // non-fatal
     }
 

@@ -23,7 +23,7 @@ const initWebSocket = (server) => {
       try {
         const decoded = verifyToken(token);
         socket.user = decoded;
-      } catch (err) { // eslint-disable-line no-unused-vars
+      } catch (err) {  
         // Token provided but invalid; we allow connection but don't set user
       }
     }

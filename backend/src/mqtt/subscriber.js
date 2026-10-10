@@ -44,7 +44,7 @@ const initMqttSubscriber = (brokerUrl = null) => {
       let payload;
       try {
         payload = JSON.parse(payloadStr);
-      } catch (jsonErr) { // eslint-disable-line no-unused-vars
+      } catch (jsonErr) {  
         console.warn(`[MQTT Subscriber] Malformed JSON on topic ${receivedTopic}: ${payloadStr}`);
         return;
       }

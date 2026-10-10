@@ -52,22 +52,26 @@ describe('Phase 0 Infrastructure: End-to-End Joint Infra Connectivity & Validati
   });
 
   it('should validate end-to-end fan-out ingestion write to both Redis (hot) and PostgreSQL (durable archive)', async () => {
-    const vehicleId = 'DL1PC8888_TEST';
-    const routeId = '419';
+    // 1a. Insert a dummy route and vehicle into legacy schema to satisfy foreign key constraints
+    const routeInsert = await pool.query<{ id: number }>('INSERT INTO routes (name, route_code) VALUES ($1, $2) RETURNING id', ['Test Route', 'TEST-419']);
+    const routeId = routeInsert.rows[0]!.id;
+    const vehicleInsert = await pool.query<{ id: number }>('INSERT INTO vehicles (vehicle_number, registration_number, route_id) VALUES ($1, $2, $3) RETURNING id', ['DL1PC8888_TEST', 'REG_DL1PC8888', routeId]);
+    const vehicleId = vehicleInsert.rows[0]!.id;
+
     const lat = 28.6315; // Connaught Place
     const lon = 77.2167;
     const speed = 14.2;
     const bearing = 90.0;
     const timestamp = Math.floor(Date.now() / 1000);
 
-    const redisPosKey = vehicleLiveKey(vehicleId);
+    const redisPosKey = vehicleLiveKey(String(vehicleId));
     const redisGeoKey = vehicleGeoKey();
 
     try {
       // 1. Hot cache write to Redis (simulating Phase 2 RedisPositionSink)
       await redis.hSet(redisPosKey, {
-        vehicle_id: vehicleId,
-        route_id: routeId,
+        vehicle_id: String(vehicleId),
+        route_id: String(routeId),
         latitude: String(lat),
         longitude: String(lon),
         speed: String(speed),
@@ -77,7 +81,7 @@ describe('Phase 0 Infrastructure: End-to-End Joint Infra Connectivity & Validati
       await redis.expire(redisPosKey, 45);
 
       await redis.geoAdd(redisGeoKey, {
-        member: vehicleId,
+        member: String(vehicleId),
         longitude: lon,
         latitude: lat,
       });
@@ -91,8 +95,8 @@ describe('Phase 0 Infrastructure: End-to-End Joint Infra Connectivity & Validati
       `;
       const pgRes = await pool.query<{
         id: string;
-        vehicle_id: string;
-        route_id: string;
+        vehicle_id: number;
+        route_id: number;
         latitude: number;
         longitude: number;
         speed: number;
@@ -101,12 +105,12 @@ describe('Phase 0 Infrastructure: End-to-End Joint Infra Connectivity & Validati
 
       // 3. Verify hot cache read
       const hotPos = await redis.hGetAll(redisPosKey);
-      assert.equal(hotPos['vehicle_id'], vehicleId);
-      assert.equal(hotPos['route_id'], routeId);
+      assert.equal(hotPos['vehicle_id'], String(vehicleId));
+      assert.equal(hotPos['route_id'], String(routeId));
       assert.equal(parseFloat(hotPos['latitude']!), lat);
       assert.equal(parseFloat(hotPos['longitude']!), lon);
 
-      const geoPos = await redis.geoPos(redisGeoKey, vehicleId);
+      const geoPos = await redis.geoPos(redisGeoKey, String(vehicleId));
       assert.ok(geoPos && geoPos.length > 0 && geoPos[0] !== null, 'Vehicle must be in geospatial index');
 
       // 4. Verify durable archive read
@@ -121,10 +125,11 @@ describe('Phase 0 Infrastructure: End-to-End Joint Infra Connectivity & Validati
     } finally {
       // Cleanup Redis keys
       await redis.del(redisPosKey);
-      await redis.zRem(redisGeoKey, vehicleId);
+      await redis.zRem(redisGeoKey, String(vehicleId));
 
-      // Cleanup PostgreSQL archive record
-      await pool.query('DELETE FROM vehicle_position_archive WHERE vehicle_id = $1', [vehicleId]);
+      // Cleanup PostgreSQL archive record and dummy data (cascade will handle archive if we delete vehicle)
+      await pool.query('DELETE FROM vehicles WHERE id = $1', [vehicleId]);
+      await pool.query('DELETE FROM routes WHERE id = $1', [routeId]);
     }
   });
 

@@ -3,7 +3,7 @@ const { errorResponse } = require('../utils/response');
 /**
  * Centralized Error Handling Middleware
  */
-const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused-vars
+const errorHandler = (err, req, res, next) => {  
   console.error('Unhandled Application Error:', err);
 
   // Body parser bad JSON error

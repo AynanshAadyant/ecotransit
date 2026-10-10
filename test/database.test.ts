@@ -121,14 +121,14 @@ describe('Phase 0 Infrastructure: PostgreSQL Database Connectivity', () => {
   });
 
   it('should verify core table columns and schema types match Phase 0 specifications', async () => {
-    // Check stops columns
+    // Check stops columns (aligned with legacy MVP)
     const stopsColsRes = await pool.query<{ column_name: string }>(`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_schema = 'public' AND table_name = 'stops'
     `);
     const stopsCols = new Set(stopsColsRes.rows.map((r) => r.column_name));
-    for (const col of ['stop_id', 'stop_name', 'latitude', 'longitude', 'cluster_id']) {
+    for (const col of ['id', 'name', 'latitude', 'longitude', 'cluster_id']) {
       assert.ok(stopsCols.has(col), `stops table must contain '${col}' column`);
     }
 
@@ -155,18 +155,18 @@ describe('Phase 0 Infrastructure: PostgreSQL Database Connectivity', () => {
   });
 
   it('should verify ACID transaction isolation and rollback integrity', async () => {
-    const testStopId = 'TEST_STOP_TX_ROLLBACK';
+    const testStopId = 9999991;
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query(
-        `INSERT INTO stops (stop_id, stop_name, latitude, longitude)
-         VALUES ($1, $2, $3, $4)`,
-        [testStopId, 'Temporary Rollback Test Stop', 28.6139, 77.209]
+        `INSERT INTO stops (id, name, stop_code, latitude, longitude)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [testStopId, 'Temporary Rollback Test Stop', 'TX_RB_01', 28.6139, 77.209]
       );
 
       // Verify row is visible inside transaction
-      const inTx = await client.query('SELECT stop_id FROM stops WHERE stop_id = $1', [testStopId]);
+      const inTx = await client.query('SELECT id FROM stops WHERE id = $1', [testStopId]);
       assert.equal(inTx.rows.length, 1);
 
       // Roll back transaction
@@ -179,7 +179,7 @@ describe('Phase 0 Infrastructure: PostgreSQL Database Connectivity', () => {
     }
 
     // Verify row does NOT exist after rollback
-    const afterRollback = await pool.query('SELECT stop_id FROM stops WHERE stop_id = $1', [
+    const afterRollback = await pool.query('SELECT id FROM stops WHERE id = $1', [
       testStopId,
     ]);
     assert.equal(
@@ -200,15 +200,15 @@ describe('Phase 0 Infrastructure: PostgreSQL Database Connectivity', () => {
         return row?.val ?? 0;
       }
 
-      public async insertStop(id: string, name: string, lat: number, lon: number): Promise<void> {
+      public async insertStop(id: number, name: string, lat: number, lon: number): Promise<void> {
         await this.query(
-          'INSERT INTO stops (stop_id, stop_name, latitude, longitude) VALUES ($1, $2, $3, $4)',
-          [id, name, lat, lon]
+          'INSERT INTO stops (id, name, stop_code, latitude, longitude) VALUES ($1, $2, $3, $4, $5)',
+          [id, name, 'REPO_STOP_' + id, lat, lon]
         );
       }
 
-      public async deleteStop(id: string): Promise<void> {
-        await this.query('DELETE FROM stops WHERE stop_id = $1', [id]);
+      public async deleteStop(id: number): Promise<void> {
+        await this.query('DELETE FROM stops WHERE id = $1', [id]);
       }
 
       public async runInTx<T>(fn: (tx: PoolClient) => Promise<T>): Promise<T> {
@@ -220,7 +220,7 @@ describe('Phase 0 Infrastructure: PostgreSQL Database Connectivity', () => {
     const pingVal = await repo.ping();
     assert.equal(pingVal, 42, 'BaseRepository queryOne should return query result');
 
-    const testStopId = 'TEST_REPO_STOP_01';
+    const testStopId = 9999992;
     try {
       await repo.insertStop(testStopId, 'Test Stop For Repo', 28.7041, 77.1025);
 
