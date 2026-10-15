@@ -49,6 +49,10 @@ export function errorMiddleware(
   res: Response,
   _next: NextFunction,
 ): void {
+  if (res.headersSent || !res || typeof res.status !== 'function') {
+    return;
+  }
+
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       error: {

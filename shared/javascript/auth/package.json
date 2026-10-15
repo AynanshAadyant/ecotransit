@@ -2,11 +2,14 @@
   "name": "@ecotransit/auth",
   "version": "1.0.0",
   "description": "Authentication, JWT tokens (RS256), session management, and auth guards for EcoTransit",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -b",
     "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

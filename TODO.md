@@ -56,9 +56,14 @@ Based on `IMPLEMENTATION_GUIDE.md` §12.
 ## Phase 3: Ingestion Worker - MQTT & Multi-Source [PENDING]
 - [ ] MQTT source & JSON parser registration without engine alteration
 
-## Phase 4: API Gateway - Core Serving & Live Broadcast [PENDING]
-- [ ] Spatial queries & stop/route search
-- [ ] Socket.IO batch broadcast scheduler
+## Phase 4: API Gateway - Core Serving & Live Broadcast [COMPLETE]
+- [x] Strict inward architectural layering (`Routes -> Controllers -> Services -> Repositories -> Data Access Drivers`)
+- [x] Spatial queries & stop/route search (`PostgresStopRepository`, `PostgresRouteRepository`, `PostgresRouteSegmentRepository`)
+- [x] Direction-aware nearest-stop resolution using heading vector dot product ($\vec{u} \cdot \vec{v}$)
+- [x] Range-sum ETA calculation service over materialized traversal matrix (`PostgresTraversalMatrixRepository`)
+- [x] Real-time Socket.IO batch broadcast scheduler with delta frame engine (`SocketGateway`, `BroadcastScheduler`)
+- [x] Zod edge validation schemas for all request parameters & DTOs
+- [x] Comprehensive test suite (35 tests: fixtures, domain services, DTO edge validation, broadcast scheduler, failure mode resiliency, and E2E REST/Socket.IO integration)
 
 ## Phase 5: Commuter Web Client [PENDING]
 - [ ] Map canvas with render isolation
