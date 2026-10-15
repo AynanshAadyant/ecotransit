@@ -1,12 +1,18 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Bus, LayoutDashboard, AlertTriangle, Settings, Bell } from 'lucide-react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Bus, LayoutDashboard, AlertTriangle, Users, MapPin, Route, LogOut, Bell } from 'lucide-react';
+import { useAuthStore } from '../state/auth.store';
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const logout = useAuthStore((s) => s.logout);
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Vehicles', path: '/vehicles', icon: Bus },
+    { name: 'Staff', path: '/staff', icon: Users },
+    { name: 'Routes', path: '/routes', icon: Route },
+    { name: 'Stops', path: '/stops', icon: MapPin },
     { name: 'Incidents', path: '/incidents', icon: AlertTriangle },
   ];
 
@@ -41,10 +47,13 @@ export default function Layout() {
         </nav>
 
         <div className="p-4 border-t border-indigo-800">
-          <div className="flex items-center gap-3 px-4 py-3 text-indigo-200 hover:text-white cursor-pointer transition-colors rounded-lg hover:bg-indigo-800/50">
-            <Settings className="w-5 h-5" />
-            <span className="font-medium">Settings</span>
-          </div>
+          <button
+            onClick={() => { logout(); navigate('/login'); }}
+            className="flex items-center gap-3 w-full px-4 py-3 text-indigo-200 hover:text-white cursor-pointer transition-colors rounded-lg hover:bg-indigo-800/50"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="font-medium">Logout</span>
+          </button>
         </div>
       </div>
 
