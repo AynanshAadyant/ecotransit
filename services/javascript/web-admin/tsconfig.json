@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@ecotransit/contracts": ["../../../shared/javascript/contracts/src/index.ts"],
+      "@ecotransit/ui": ["../../../shared/javascript/ui/src/index.ts"],
+      "@ecotransit/ui/*": ["../../../shared/javascript/ui/src/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}
