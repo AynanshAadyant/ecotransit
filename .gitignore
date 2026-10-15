@@ -52,3 +52,7 @@ coverage/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Temporary files
+ecotransit-backup.sql
+lint-errors.txt

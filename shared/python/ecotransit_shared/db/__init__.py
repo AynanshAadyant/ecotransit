@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-from config import DatabaseSettings, RedisSettings
 
 # --- Shared Redis Key Builders ---
 
@@ -71,7 +70,7 @@ def create_redis_client(
     try:
         import redis.asyncio as redis
     except ImportError as e:
-        raise ImportError("redis is required to create a redis client. Run 'pip install redis'.") from e    
+        raise ImportError("redis is required to create a redis client. Run 'pip install redis'.") from e
     except Exception as e:
         raise ImportError("An unexpected error occurred while importing redis.asyncio.") from e
 
