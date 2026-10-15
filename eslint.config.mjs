@@ -20,8 +20,12 @@ export default tseslint.config(
   },
   {
     files: ['**/*.js', '**/*.cjs', '**/*.mjs'],
+    linterOptions: {
+      reportUnusedDisableDirectives: 'off',
+    },
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
       'no-undef': 'off',
     },
   },
