@@ -5,21 +5,44 @@ export type IncidentType =
   | 'medical'
   | 'other';
 
-export type IncidentStatus = 'open' | 'acknowledged' | 'resolved';
+export type IncidentStatus =
+  | 'open'
+  | 'acknowledged'
+  | 'resolved'
+  | 'OPEN'
+  | 'ACKNOWLEDGED'
+  | 'RESOLVED';
+
+export type IncidentSeverity =
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'critical'
+  | 'LOW'
+  | 'MEDIUM'
+  | 'HIGH'
+  | 'CRITICAL';
 
 export interface Incident {
-  id: string;
-  incidentType: IncidentType;
+  incidentId: string;
+  id?: string | undefined;
+  incidentType?: IncidentType | undefined;
   description: string;
-  reportedByStaffId: string;
-  vehicleId: string;
+  reportedBy?: string | undefined;
+  reportedByStaffId?: string | undefined;
+  vehicleId?: string | undefined;
   routeId?: string | undefined;
   latitude?: number | undefined;
   longitude?: number | undefined;
   status: IncidentStatus;
-  idempotencyKey: string;
-  createdAt: number;
-  updatedAt: number;
+  severity?: IncidentSeverity | undefined;
+  idempotencyKey?: string | undefined;
+  createdAt?: number | undefined;
+  updatedAt?: number | undefined;
+  timestamp?: number | string | undefined;
+  acknowledgedBy?: string | undefined;
+  resolvedBy?: string | undefined;
+  resolutionNotes?: string | undefined;
 }
 
 export interface CreateIncidentCommand {

@@ -62,7 +62,7 @@ export function initTransitSocket(
     return socket;
   }
 
-  const socketUrl = import.meta.env.VITE_WS_URL || window.location.origin;
+  const socketUrl = import.meta.env['VITE_WS_URL'] || window.location.origin;
 
   socket = io(socketUrl, {
     path: '/events/telemetry',
@@ -79,6 +79,10 @@ export function initTransitSocket(
   });
 
   socket.on('disconnect', () => {
+    statusListener?.('disconnected');
+  });
+
+  socket.on('connect_error', () => {
     statusListener?.('disconnected');
   });
 

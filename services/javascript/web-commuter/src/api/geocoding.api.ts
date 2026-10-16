@@ -18,8 +18,8 @@ export async function searchLocation(query: string): Promise<LocationResult[]> {
   // 1. Direct coordinate check (lat, lon)
   const coordMatch = trimmed.match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
   if (coordMatch) {
-    const lat = parseFloat(coordMatch[1]);
-    const lon = parseFloat(coordMatch[3]);
+    const lat = parseFloat(coordMatch[1] ?? '0');
+    const lon = parseFloat(coordMatch[3] ?? '0');
     if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
       return [
         {

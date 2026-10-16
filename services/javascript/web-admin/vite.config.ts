@@ -22,5 +22,15 @@ export default defineConfig({
   },
   server: {
     port: 5175,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+      '/events/telemetry': {
+        target: 'http://localhost:4000',
+        ws: true,
+      },
+    },
   },
 });

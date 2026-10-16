@@ -42,6 +42,7 @@ export const FleetMapView: React.FC<FleetMapViewProps> = ({
           selectedRouteId={selectedRouteId}
           onSelectVehicle={onSelectVehicle}
           onSelectRoute={onSelectRoute}
+          showAllRoutesOnMount={true}
         />
       ) : (
         <MapCanvas

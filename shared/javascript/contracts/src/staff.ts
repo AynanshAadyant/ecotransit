@@ -37,6 +37,18 @@ export interface ShiftAssignment {
   createdAt?: number | undefined;
 }
 
+export interface Shift {
+  shiftId: string;
+  staffId: string;
+  staffName: string;
+  assignedVehicleId: string;
+  assignedRouteId: string;
+  startTime: string;
+  endTime: string;
+  confirmed: boolean;
+  confirmedAt?: string | undefined;
+}
+
 export interface LoginCommand {
   employeeId: string;
   password: string;

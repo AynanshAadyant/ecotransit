@@ -25,7 +25,7 @@ export function setAuthCookie(
     path: '/',
   });
 
-  res.setHeader('Set-Cookie', serialized);
+  res.append('Set-Cookie', serialized);
 }
 
 export function clearAuthCookie(res: Response, options: CookieOptions = {}): void {
@@ -39,7 +39,7 @@ export function clearAuthCookie(res: Response, options: CookieOptions = {}): voi
     path: '/',
   });
 
-  res.setHeader('Set-Cookie', serialized);
+  res.append('Set-Cookie', serialized);
 }
 
 export function readAuthCookie(req: Request, options: CookieOptions = {}): string | null {

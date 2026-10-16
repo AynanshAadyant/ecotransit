@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useMap } from 'react-leaflet';
 import { searchLocation, LocationResult } from '../api/geocoding.api';
 import { useLocationStore } from '../state/location';
 
@@ -13,12 +12,12 @@ const POPULAR_TIER2_SUGGESTIONS = [
 ];
 
 interface LocationSearchProps {
+  map?: { flyTo: (center: [number, number], zoom: number, options?: Record<string, unknown>) => void };
   onCitySelected?: (cityName: string, lat: number, lon: number) => void;
   style?: React.CSSProperties;
 }
 
-export const LocationSearch: React.FC<LocationSearchProps> = ({ onCitySelected, style }) => {
-  const map = useMap();
+export const LocationSearch: React.FC<LocationSearchProps> = ({ map, onCitySelected, style }) => {
   const setSelectedLocation = useLocationStore((s) => s.setSelectedLocation);
   const selectedLocation = useLocationStore((s) => s.selectedLocation);
 
@@ -46,11 +45,12 @@ export const LocationSearch: React.FC<LocationSearchProps> = ({ onCitySelected, 
   const selectLocation = (location: LocationResult | { name: string; lat: number; lon: number; state?: string }) => {
     const lat = 'latitude' in location ? location.latitude : location.lat;
     const lon = 'longitude' in location ? location.longitude : location.lon;
-    const name = 'displayName' in location ? location.displayName.split(',')[0] : location.name;
-    const fullName = 'displayName' in location ? location.displayName : `${location.name}, ${location.state}`;
+    const isLocationResult = 'displayName' in location;
+    const name = (isLocationResult ? location.displayName.split(',')[0] : location.name) || '';
+    const fullName = (isLocationResult ? location.displayName : `${location.name}, ${location.state || ''}`) || '';
 
     // Fly to searched city/location at zoom 13 per specification
-    map.flyTo([lat, lon], 13, { duration: 1.8 });
+    map?.flyTo([lat, lon], 13, { duration: 1.8 });
 
     setSelectedLocation({
       name,
@@ -68,7 +68,7 @@ export const LocationSearch: React.FC<LocationSearchProps> = ({ onCitySelected, 
   };
 
   const handleResetToIndia = () => {
-    map.flyTo([22.9734, 78.6569], 5, { duration: 1.5 });
+    map?.flyTo([22.9734, 78.6569], 5, { duration: 1.5 });
     useLocationStore.getState().clearSelectedLocation();
     setQuery('');
     setResults([]);

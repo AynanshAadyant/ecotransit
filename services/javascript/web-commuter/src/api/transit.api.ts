@@ -23,7 +23,7 @@ function titleCase(str: string) {
 }
 
 function pickRoute(seed: number) {
-  return DELHI_ROUTES[Math.abs(seed) % DELHI_ROUTES.length];
+  return DELHI_ROUTES[Math.abs(seed) % DELHI_ROUTES.length] ?? DELHI_ROUTES[0]!;
 }
 
 function mockDelay(ms = 700) {

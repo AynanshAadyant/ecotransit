@@ -7,9 +7,9 @@ export type AdminTab = 'FLEET' | 'INCIDENTS' | 'STAFF' | 'REPORTS';
 interface AdminHeaderProps {
   activeTab: AdminTab;
   onTabChange: (tab: AdminTab) => void;
-  openIncidentsCount?: number;
-  userName?: string;
-  userRole?: string;
+  openIncidentsCount?: number | undefined;
+  userName?: string | undefined;
+  userRole?: string | undefined;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({

@@ -59,7 +59,7 @@ export const IncidentDetail: React.FC<IncidentDetailProps> = ({ incident, onClos
         </div>
         <div>
           <span style={{ color: '#94a3b8' }}>Timestamp:</span>
-          <div style={{ fontWeight: 600 }}>{new Date(incident.timestamp).toLocaleString()}</div>
+          <div style={{ fontWeight: 600 }}>{new Date(incident.timestamp ?? Date.now()).toLocaleString()}</div>
         </div>
         <div>
           <span style={{ color: '#94a3b8' }}>Assigned Vehicle:</span>

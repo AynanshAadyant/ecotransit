@@ -3,8 +3,8 @@ import { Incident, IncidentSeverity } from '@ecotransit/contracts';
 
 export interface IncidentDraft {
   idempotencyKey: string;
-  vehicleId?: string;
-  routeId?: string;
+  vehicleId?: string | undefined;
+  routeId?: string | undefined;
   severity: IncidentSeverity;
   description: string;
   createdAt: number;

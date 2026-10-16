@@ -60,7 +60,9 @@ export const App: React.FC = () => {
     useVehiclesStore.getState().updateVehicles(delhi.vehicles);
   }, []);
 
-  const legendItems = routes.map((r) => ({ label: r.name, color: r.color }));
+  const legendItems = selectedRoute
+    ? routes.filter((r) => r.routeId === selectedRoute).map((r) => ({ label: r.name, color: r.color }))
+    : [];
 
   return (
     <div
@@ -92,7 +94,7 @@ export const App: React.FC = () => {
           borderBottom: '1px solid rgba(255,255,255,0.07)',
         }}
       >
-        <SearchPanel />
+        <SearchPanel routes={routes} />
 
         {/* Map engine switcher — stays right-aligned */}
         <div
@@ -155,7 +157,8 @@ export const App: React.FC = () => {
             onSelectRoute={setSelectedRoute}
             onSelectStop={setSelectedStop}
             center={[28.6139, 77.2090]}
-            zoom={14}
+            zoom={12}
+            showAllRoutesOnMount={false}
           />
         ) : (
           <MapCanvas onTransformChange={setTransform}>

@@ -118,7 +118,7 @@ export const IncidentQueue: React.FC<IncidentQueueProps> = ({
                     </div>
 
                     <span style={{ fontSize: '11px', color: '#64748b' }}>
-                      {new Date(incident.timestamp).toLocaleTimeString()}
+                      {new Date(incident.timestamp ?? Date.now()).toLocaleTimeString()}
                     </span>
                   </div>
 

@@ -3,11 +3,67 @@ import type { TimeBucket } from './common.js';
 
 export interface Stop {
   stopId: string;
-  stopName: string;
+  stopName?: string | undefined;
+  name?: string | undefined;
   displayName?: string | undefined;
   latitude: number;
   longitude: number;
   clusterId?: string | undefined;
+  routeIds?: string[] | undefined;
+}
+
+export interface RouteGeometry {
+  routeId: string;
+  name: string;
+  color: string;
+  path: [number, number][];
+}
+
+export interface Vehicle {
+  vehicleId: string;
+  routeId: string;
+  latitude: number;
+  longitude: number;
+  speed?: number | undefined;
+  heading?: number | undefined;
+  occupancyStatus?: string | undefined;
+  timestamp?: string | number | undefined;
+}
+
+export interface JourneySegment {
+  segmentId: string;
+  routeId: string;
+  routeName: string;
+  fromStop: string;
+  toStop: string;
+  departureTime: string;
+  arrivalTime: string;
+  durationMinutes: number;
+}
+
+export interface JourneyResult {
+  journeyId: string;
+  origin: string;
+  destination: string;
+  totalDurationMinutes: number;
+  fare: number;
+  segments: JourneySegment[];
+}
+
+export interface EtaResponse {
+  routeId: string;
+  segmentId: string;
+  eta_seconds: number;
+  variance_total: number;
+  weakest_cell_support: number;
+}
+
+export interface HeatmapBucket {
+  segmentId: string | number;
+  intensity?: number | undefined;
+  speedKmh?: number | undefined;
+  congestionScore?: number | undefined;
+  [key: string]: unknown;
 }
 
 export interface RouteSummary {
