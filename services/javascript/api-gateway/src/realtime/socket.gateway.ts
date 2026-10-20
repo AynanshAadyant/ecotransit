@@ -42,8 +42,9 @@ export class SocketGateway implements ISocketGateway {
   broadcast(frame: TelemetryBatchFrame): void {
     if (this.activeClients === 0) return;
 
-    // Emits telemetry_frame event to all connected sockets
+    // Emits telemetry_frame event and telemetry:batch alias to all connected sockets
     this.io.emit('telemetry_frame', frame);
+    this.io.emit('telemetry:batch', frame);
 
     // Also dispatch to specific route rooms if vehicles belong to routes
     for (const vehicle of frame.vehicles) {

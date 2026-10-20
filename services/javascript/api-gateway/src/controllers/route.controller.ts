@@ -27,7 +27,11 @@ export class RouteController extends BaseController {
 
   searchJourneys = this.handle(async (req) => {
     const query = DirectJourneyQuerySchema.parse(req.query);
-    return this.routeService.findJourneys(query.originStopId, query.destinationStopId);
+    return this.routeService.findJourneys(
+      query.originStopId,
+      query.destinationStopId,
+      query.radiusM ?? 800,
+    );
   });
 
   searchJourneysByCoords = this.handle(async (req) => {

@@ -12,6 +12,9 @@
     "lint:fix": "eslint src --fix",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
   "devDependencies": {
     "typescript": "^5.5.4"
   }

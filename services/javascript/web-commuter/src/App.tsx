@@ -1,10 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useVehiclesStore } from './state/vehicles';
 import { useTransformStore } from './state/transform';
 import { useSelectionStore } from './state/selection';
-import { initTransitSocket, disconnectTransitSocket } from './api/socket';
+import { useSearchStore } from './state/search';
+import {
+  initTransitSocket,
+  disconnectTransitSocket,
+  subscribeToRoute,
+  unsubscribeFromRoute,
+} from './api/socket';
+import {
+  getRoutes,
+  getStops,
+  getLiveVehicles,
+  getRouteStops,
+} from './api/transit.api';
 
-import { RouteGeometry, Stop } from '@ecotransit/contracts';
+import { RouteGeometry, Stop, Vehicle } from '@ecotransit/contracts';
 import { MapCanvas } from './map/MapCanvas';
 import { MapBackground } from './map/MapBackground';
 import { BusMarkerLayer } from './map/BusMarkerLayer';
@@ -30,6 +42,18 @@ export const App: React.FC = () => {
   const setSelectedVehicle = useSelectionStore((state) => state.setSelectedVehicle);
   const setSelectedRoute = useSelectionStore((state) => state.setSelectedRoute);
   const setSelectedStop = useSelectionStore((state) => state.setSelectedStop);
+  const searchResults = useSearchStore((state) => state.results);
+
+  // Extract all matched routes between from & to stop clusters
+  const matchedRouteIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const j of searchResults) {
+      for (const s of j.segments) {
+        if (s.routeId) set.add(s.routeId);
+      }
+    }
+    return Array.from(set);
+  }, [searchResults]);
 
   // Static transit network geometry
   const [routes, setRoutes] = useState<RouteGeometry[]>([]);
@@ -52,17 +76,137 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // 2. Seed Delhi transit data on mount (no backend required)
+  // 2. Fetch live data from API Gateway with graceful fallback
   useEffect(() => {
-    const delhi = generateCityTransit(DELHI.name, DELHI.lat, DELHI.lon);
-    setRoutes(delhi.routes);
-    setStops(delhi.stops);
-    useVehiclesStore.getState().updateVehicles(delhi.vehicles);
+    let isMounted = true;
+
+    async function bootstrapTransitData() {
+      try {
+        const [backendRoutes, backendStops, backendVehicles] = await Promise.all([
+          getRoutes(),
+          getStops(5000, DELHI.lat, DELHI.lon, 150),
+          getLiveVehicles(),
+        ]);
+
+        if (isMounted) {
+          // If routes loaded from backend
+          if (backendRoutes && backendRoutes.length > 0) {
+            setRoutes(backendRoutes);
+          } else {
+            const fallback = generateCityTransit(DELHI.name, DELHI.lat, DELHI.lon);
+            setRoutes(fallback.routes);
+          }
+
+          // If stops loaded from backend
+          if (backendStops && backendStops.length > 0) {
+            setStops(backendStops);
+          } else {
+            const fallback = generateCityTransit(DELHI.name, DELHI.lat, DELHI.lon);
+            setStops(fallback.stops);
+          }
+
+          // If live vehicles loaded from backend
+          if (backendVehicles && backendVehicles.length > 0) {
+            const vehicleMap: Record<string, Vehicle> = {};
+            for (const v of backendVehicles) {
+              vehicleMap[v.vehicleId] = v;
+            }
+            useVehiclesStore.getState().updateVehicles(vehicleMap);
+          } else {
+            // Seed realistic initial positions if Redis buffer is currently quiet
+            const fallback = generateCityTransit(DELHI.name, DELHI.lat, DELHI.lon);
+            useVehiclesStore.getState().updateVehicles(fallback.vehicles);
+          }
+        }
+      } catch (err) {
+        console.warn('[App] Backend not reachable, using fallback transit topology:', err);
+        if (isMounted) {
+          const fallback = generateCityTransit(DELHI.name, DELHI.lat, DELHI.lon);
+          setRoutes(fallback.routes);
+          setStops(fallback.stops);
+          useVehiclesStore.getState().updateVehicles(fallback.vehicles);
+        }
+      }
+    }
+
+    bootstrapTransitData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const legendItems = selectedRoute
-    ? routes.filter((r) => r.routeId === selectedRoute).map((r) => ({ label: r.name, color: r.color }))
-    : [];
+  // 3. Handle route selection: dynamically fetch stops to build polyline & subscribe to route telemetry
+  useEffect(() => {
+    if (!selectedRoute) return;
+
+    subscribeToRoute(selectedRoute);
+
+    const activeRoute = routes.find((r) => r.routeId === selectedRoute);
+    if (activeRoute && (!activeRoute.path || activeRoute.path.length === 0)) {
+      getRouteStops(selectedRoute)
+        .then((routeStops) => {
+          if (routeStops.length > 0) {
+            const pathCoords: [number, number][] = routeStops.map((s) => [s.latitude, s.longitude]);
+            setRoutes((prevRoutes) =>
+              prevRoutes.map((r) => (r.routeId === selectedRoute ? { ...r, path: pathCoords } : r))
+            );
+            // Also add stops if not already present
+            setStops((prevStops) => {
+              const existingIds = new Set(prevStops.map((s) => s.stopId));
+              const newStops = routeStops.filter((s) => !existingIds.has(s.stopId));
+              return newStops.length > 0 ? [...prevStops, ...newStops] : prevStops;
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn(`[App] Could not load stop path for route ${selectedRoute}:`, err);
+        });
+    }
+
+    return () => {
+      unsubscribeFromRoute(selectedRoute);
+    };
+  }, [selectedRoute, routes]);
+
+  // 4. Dynamically fetch paths for all matched routes between from & to stop clusters
+  useEffect(() => {
+    if (matchedRouteIds.length === 0) return;
+    for (const routeId of matchedRouteIds) {
+      const activeRoute = routes.find((r) => r.routeId === routeId);
+      if (activeRoute && (!activeRoute.path || activeRoute.path.length === 0)) {
+        getRouteStops(routeId)
+          .then((routeStops) => {
+            if (routeStops.length > 0) {
+              const pathCoords: [number, number][] = routeStops.map((s) => [s.latitude, s.longitude]);
+              setRoutes((prevRoutes) =>
+                prevRoutes.map((r) => (r.routeId === routeId ? { ...r, path: pathCoords } : r))
+              );
+              setStops((prevStops) => {
+                const existingIds = new Set(prevStops.map((s) => s.stopId));
+                const newStops = routeStops.filter((s) => !existingIds.has(s.stopId));
+                return newStops.length > 0 ? [...prevStops, ...newStops] : prevStops;
+              });
+            }
+          })
+          .catch((err) => {
+            console.warn(`[App] Could not load stop path for matched route ${routeId}:`, err);
+          });
+      }
+    }
+  }, [matchedRouteIds, routes]);
+
+  const legendItems = useMemo(() => {
+    const idsToShow = matchedRouteIds.length > 0
+      ? matchedRouteIds
+      : selectedRoute
+      ? [selectedRoute]
+      : [];
+    const set = new Set(idsToShow);
+    return routes
+      .filter((r) => set.has(r.routeId))
+      .map((r) => ({ label: r.name, color: r.color }));
+  }, [routes, matchedRouteIds, selectedRoute]);
 
   return (
     <div
@@ -94,7 +238,7 @@ export const App: React.FC = () => {
           borderBottom: '1px solid rgba(255,255,255,0.07)',
         }}
       >
-        <SearchPanel routes={routes} />
+        <SearchPanel routes={routes} stops={stops} />
 
         {/* Map engine switcher — stays right-aligned */}
         <div
@@ -153,6 +297,7 @@ export const App: React.FC = () => {
             stops={stops}
             selectedVehicleId={selectedVehicle}
             selectedRouteId={selectedRoute}
+            matchedRouteIds={matchedRouteIds}
             onSelectVehicle={setSelectedVehicle}
             onSelectRoute={setSelectedRoute}
             onSelectStop={setSelectedStop}
@@ -179,7 +324,7 @@ export const App: React.FC = () => {
           </MapCanvas>
         )}
 
-        {/* Floating Right Detail Panel (bus tap) */}
+        {/* Floating Right Detail Panel (bus tap with live ETA calculation) */}
         <BusDetail />
 
         {/* Bottom Legend */}

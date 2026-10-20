@@ -93,3 +93,17 @@ class FanOutSink(ISink):
             status = "healthy"
 
         return HealthStatus(status=status, details=details)
+
+    async def aclose(self) -> None:
+        """Closes all child sinks asynchronously if supported."""
+        for child in self._children:
+            if hasattr(child, "aclose") and callable(child.aclose):
+                await child.aclose()
+            elif hasattr(child, "close") and callable(child.close):
+                child.close()
+
+    def close(self) -> None:
+        """Closes all child sinks synchronously if supported."""
+        for child in self._children:
+            if hasattr(child, "close") and callable(child.close):
+                child.close()

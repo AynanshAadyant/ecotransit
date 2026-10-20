@@ -7,7 +7,7 @@ import axios from 'axios';
  * withCredentials: true sends and receives session cookies automatically.
  */
 export const apiClient = axios.create({
-  baseURL: import.meta.env['VITE_API_URL'] || '/api/staff',
+  baseURL: import.meta.env['VITE_API_URL'] || 'http://localhost:4001/api/staff',
   timeout: 10000,
   withCredentials: true,
   headers: {

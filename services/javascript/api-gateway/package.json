@@ -6,6 +6,8 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
+    "dev": "tsx src/index.ts",
+    "dev:watch": "tsx --watch src/index.ts",
     "build": "tsc -b",
     "clean": "rimraf dist tsconfig.tsbuildinfo",
     "start": "node dist/index.js",

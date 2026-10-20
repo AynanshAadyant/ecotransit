@@ -148,7 +148,7 @@ export interface IRouteSegmentRepository {
 }
 
 export interface IStopRepository {
-  findNearby(lat: number, lon: number, radiusM: number): Promise<Stop[]>;
+  findNearby(lat: number, lon: number, radiusM: number, limit?: number): Promise<Stop[]>;
   findNearestOnRoute(
     routeId: string,
     lat: number,
@@ -158,6 +158,7 @@ export interface IStopRepository {
   findRoutesServingStop(stopId: string): Promise<RouteSummary[]>;
   searchByName(query: string, limit?: number): Promise<Stop[]>;
   findById(stopId: string): Promise<Stop | null>;
+  findClusterStops(stopId: string, radiusM?: number): Promise<Stop[]>;
 }
 
 export interface IRouteRepository {
@@ -167,6 +168,10 @@ export interface IRouteRepository {
   findDirectJourneys(
     originStopId: string,
     destinationStopId: string,
+  ): Promise<DirectJourneyResult[]>;
+  findDirectJourneysBetweenStopSets(
+    originStopIds: string[],
+    destinationStopIds: string[],
   ): Promise<DirectJourneyResult[]>;
 }
 

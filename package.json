@@ -18,6 +18,7 @@
     "migrate": "tsx database/migrate.ts",
     "seed": "tsx database/seed.ts",
     "clean": "npm run clean --workspaces --if-present && rimraf node_modules",
+    "dev:gateway": "tsx services/javascript/api-gateway/src/index.ts",
     "dev:commuter": "npm run dev --workspace=web-commuter",
     "dev:admin": "npm run dev --workspace=web-admin",
     "dev:staff": "npm run dev --workspace=web-staff",

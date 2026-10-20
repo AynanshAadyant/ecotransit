@@ -4,8 +4,8 @@ import type { IStopRepository, Stop, RouteSummary } from '../repositories/contra
 export class StopService {
   constructor(private readonly stopRepo: IStopRepository) {}
 
-  async getNearbyStops(lat: number, lon: number, radiusM: number): Promise<Stop[]> {
-    return this.stopRepo.findNearby(lat, lon, radiusM);
+  async getNearbyStops(lat: number, lon: number, radiusM: number, limit = 150): Promise<Stop[]> {
+    return this.stopRepo.findNearby(lat, lon, radiusM, limit);
   }
 
   async searchStops(query: string, limit = 20): Promise<Stop[]> {

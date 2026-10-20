@@ -19,6 +19,7 @@ export interface LeafletTransitMapProps {
   stops: Stop[];
   selectedVehicleId?: string | null | undefined;
   selectedRouteId?: string | null | undefined;
+  matchedRouteIds?: string[] | undefined;
   onSelectVehicle?: ((id: string) => void) | undefined;
   onSelectRoute?: ((id: string) => void) | undefined;
   onSelectStop?: ((id: string) => void) | undefined;
@@ -63,6 +64,7 @@ CachedBaseTileLayer.displayName = 'CachedBaseTileLayer';
 interface ActiveRouteLayerProps {
   routes: RouteGeometry[];
   selectedRouteId?: string | null | undefined;
+  matchedRouteIds?: string[] | undefined;
   showAllRoutesOnMount?: boolean | undefined;
   onSelectRoute?: ((id: string) => void) | undefined;
 }
@@ -70,15 +72,21 @@ interface ActiveRouteLayerProps {
 const ActiveRouteLayer = memo<ActiveRouteLayerProps>(({
   routes,
   selectedRouteId,
+  matchedRouteIds,
   showAllRoutesOnMount,
   onSelectRoute,
 }) => {
   const routesToRender = useMemo(() => {
+    if (matchedRouteIds && matchedRouteIds.length > 0) {
+      const matchSet = new Set(matchedRouteIds);
+      if (selectedRouteId) matchSet.add(selectedRouteId);
+      return routes.filter((r) => matchSet.has(r.routeId));
+    }
     if (selectedRouteId) {
       return routes.filter((r) => r.routeId === selectedRouteId);
     }
     return showAllRoutesOnMount ? routes : [];
-  }, [routes, selectedRouteId, showAllRoutesOnMount]);
+  }, [routes, selectedRouteId, matchedRouteIds, showAllRoutesOnMount]);
 
   if (routesToRender.length === 0) return null;
 
@@ -141,6 +149,7 @@ ActiveRouteLayer.displayName = 'ActiveRouteLayer';
 interface ActiveRouteStopsLayerProps {
   stops: Stop[];
   selectedRoute?: RouteGeometry | null | undefined;
+  matchedRoutes?: RouteGeometry[] | undefined;
   showAllRoutesOnMount?: boolean | undefined;
   onSelectStop?: ((id: string) => void) | undefined;
 }
@@ -148,22 +157,30 @@ interface ActiveRouteStopsLayerProps {
 const ActiveRouteStopsLayer = memo<ActiveRouteStopsLayerProps>(({
   stops,
   selectedRoute,
+  matchedRoutes,
   showAllRoutesOnMount,
   onSelectStop,
 }) => {
   const stopsToRender = useMemo(() => {
-    if (!selectedRoute && !showAllRoutesOnMount) return [];
-    if (!selectedRoute) return stops;
+    const candidateRoutes = [
+      ...(selectedRoute ? [selectedRoute] : []),
+      ...(matchedRoutes ?? []),
+    ];
 
-    // Filter stops proximate to the searched route's coordinates
+    if (candidateRoutes.length === 0 && !showAllRoutesOnMount) return [];
+    if (candidateRoutes.length === 0) return stops;
+
+    // Filter stops proximate to any searched or matched route coordinates
     return stops.filter((stop) => {
-      return selectedRoute.path.some(([lat, lon]) => {
-        const dLat = Math.abs(lat - stop.latitude);
-        const dLon = Math.abs(lon - stop.longitude);
-        return dLat < 0.012 && dLon < 0.012; // ~1km spatial proximity threshold
-      });
+      return candidateRoutes.some((route) =>
+        route.path.some(([lat, lon]) => {
+          const dLat = Math.abs(lat - stop.latitude);
+          const dLon = Math.abs(lon - stop.longitude);
+          return dLat < 0.012 && dLon < 0.012; // ~1km spatial proximity threshold
+        })
+      );
     });
-  }, [stops, selectedRoute, showAllRoutesOnMount]);
+  }, [stops, selectedRoute, matchedRoutes, showAllRoutesOnMount]);
 
   if (stopsToRender.length === 0) return null;
 
@@ -209,6 +226,7 @@ ActiveRouteStopsLayer.displayName = 'ActiveRouteStopsLayer';
 interface ViewportLiveBusesLayerProps {
   vehicles: Record<string, Vehicle>;
   selectedRouteId?: string | null | undefined;
+  matchedRouteIds?: string[] | undefined;
   selectedVehicleId?: string | null | undefined;
   showAllRoutesOnMount?: boolean | undefined;
   onSelectVehicle?: ((id: string) => void) | undefined;
@@ -217,6 +235,7 @@ interface ViewportLiveBusesLayerProps {
 const ViewportLiveBusesLayer: React.FC<ViewportLiveBusesLayerProps> = ({
   vehicles,
   selectedRouteId,
+  matchedRouteIds,
   selectedVehicleId,
   showAllRoutesOnMount,
   onSelectVehicle,
@@ -250,20 +269,42 @@ const ViewportLiveBusesLayer: React.FC<ViewportLiveBusesLayerProps> = ({
 
   // Filter vehicles by active route AND viewport spatial containment
   const visibleVehicles = useMemo(() => {
-    if (!selectedRouteId && !showAllRoutesOnMount) return [];
+    const hasRoutes = !!selectedRouteId || (matchedRouteIds && matchedRouteIds.length > 0);
+    if (!hasRoutes && !showAllRoutesOnMount) return [];
 
     const all = Object.values(vehicles);
+    const candidateRouteIds = [
+      ...(selectedRouteId ? [selectedRouteId] : []),
+      ...(matchedRouteIds ?? []),
+    ];
+
     return all.filter((v) => {
       if (v.latitude == null || v.longitude == null) return false;
-      // Must be on the searched route
-      if (selectedRouteId && v.routeId !== selectedRouteId) return false;
+      // Must be on any of the searched or matched routes (handles direction suffixes like UP/DOWN)
+      if (hasRoutes) {
+        const vRoute = (v.routeId || '').toLowerCase().trim();
+        const baseVRoute = vRoute.replace(/(up|down)$/, '');
+
+        const matchesAny = candidateRouteIds.some((cid) => {
+          const sRoute = cid.toLowerCase().trim();
+          const baseSRoute = sRoute.replace(/(up|down)$/, '');
+          return (
+            vRoute === sRoute ||
+            baseVRoute === baseSRoute ||
+            vRoute.includes(sRoute) ||
+            sRoute.includes(vRoute)
+          );
+        });
+
+        if (!matchesAny) return false;
+      }
       // Must be within current viewport bounds
       if (viewportBounds) {
         return viewportBounds.contains([v.latitude, v.longitude]);
       }
       return true;
     });
-  }, [vehicles, selectedRouteId, showAllRoutesOnMount, viewportBounds]);
+  }, [vehicles, selectedRouteId, matchedRouteIds, showAllRoutesOnMount, viewportBounds]);
 
   if (visibleVehicles.length === 0) return null;
 
@@ -329,15 +370,17 @@ const ViewportLiveBusesLayer: React.FC<ViewportLiveBusesLayerProps> = ({
  */
 interface RouteFocusControllerProps {
   selectedRoute?: RouteGeometry | null | undefined;
+  matchedRoutes?: RouteGeometry[] | undefined;
   selectedVehicle?: Vehicle | undefined;
 }
 
 const RouteFocusController: React.FC<RouteFocusControllerProps> = ({
   selectedRoute,
+  matchedRoutes,
   selectedVehicle,
 }) => {
   const map = useMap();
-  const prevRouteIdRef = useRef<string | null>(null);
+  const prevRouteKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -346,25 +389,34 @@ const RouteFocusController: React.FC<RouteFocusControllerProps> = ({
     return () => clearTimeout(timer);
   }, [map]);
 
-  // Fit bounds to searched route
+  // Fit bounds to searched or matched routes corridor
   useEffect(() => {
-    if (
-      selectedRoute &&
-      selectedRoute.path &&
-      selectedRoute.path.length > 0 &&
-      selectedRoute.routeId !== prevRouteIdRef.current
-    ) {
-      prevRouteIdRef.current = selectedRoute.routeId;
+    const allRoutes = [
+      ...(selectedRoute ? [selectedRoute] : []),
+      ...(matchedRoutes ?? []),
+    ];
+
+    const currentKey = allRoutes.map((r) => r.routeId).sort().join(',');
+    if (allRoutes.length > 0 && currentKey !== prevRouteKeyRef.current) {
+      prevRouteKeyRef.current = currentKey;
       try {
-        const bounds = L.latLngBounds(selectedRoute.path as [number, number][]);
-        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14, animate: true });
+        const allWaypoints: [number, number][] = [];
+        for (const r of allRoutes) {
+          if (r.path && r.path.length > 0) {
+            allWaypoints.push(...(r.path as [number, number][]));
+          }
+        }
+        if (allWaypoints.length > 0) {
+          const bounds = L.latLngBounds(allWaypoints);
+          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14, animate: true });
+        }
       } catch {
         // Safe fallback
       }
-    } else if (!selectedRoute) {
-      prevRouteIdRef.current = null;
+    } else if (allRoutes.length === 0) {
+      prevRouteKeyRef.current = null;
     }
-  }, [selectedRoute, map]);
+  }, [selectedRoute, matchedRoutes, map]);
 
   // Pan to selected vehicle
   useEffect(() => {
@@ -391,6 +443,7 @@ export const LeafletTransitMap: React.FC<LeafletTransitMapProps> = ({
   stops,
   selectedVehicleId,
   selectedRouteId,
+  matchedRouteIds,
   onSelectVehicle,
   onSelectRoute,
   onSelectStop,
@@ -402,6 +455,12 @@ export const LeafletTransitMap: React.FC<LeafletTransitMapProps> = ({
     () => (selectedRouteId ? routes.find((r) => r.routeId === selectedRouteId) : null),
     [routes, selectedRouteId]
   );
+
+  const matchedRoutes = useMemo(() => {
+    if (!matchedRouteIds || matchedRouteIds.length === 0) return [];
+    const set = new Set(matchedRouteIds);
+    return routes.filter((r) => set.has(r.routeId));
+  }, [routes, matchedRouteIds]);
 
   const selectedVehicle = selectedVehicleId ? vehicles[selectedVehicleId] : undefined;
 
@@ -423,6 +482,7 @@ export const LeafletTransitMap: React.FC<LeafletTransitMapProps> = ({
         {/* Layer 3: Viewport Controller */}
         <RouteFocusController
           selectedRoute={selectedRoute}
+          matchedRoutes={matchedRoutes}
           selectedVehicle={selectedVehicle}
         />
 
@@ -430,6 +490,7 @@ export const LeafletTransitMap: React.FC<LeafletTransitMapProps> = ({
         <ActiveRouteLayer
           routes={routes}
           selectedRouteId={selectedRouteId}
+          matchedRouteIds={matchedRouteIds}
           showAllRoutesOnMount={showAllRoutesOnMount}
           onSelectRoute={onSelectRoute}
         />
@@ -438,6 +499,7 @@ export const LeafletTransitMap: React.FC<LeafletTransitMapProps> = ({
         <ActiveRouteStopsLayer
           stops={stops}
           selectedRoute={selectedRoute}
+          matchedRoutes={matchedRoutes}
           showAllRoutesOnMount={showAllRoutesOnMount}
           onSelectStop={onSelectStop}
         />
@@ -446,6 +508,7 @@ export const LeafletTransitMap: React.FC<LeafletTransitMapProps> = ({
         <ViewportLiveBusesLayer
           vehicles={vehicles}
           selectedRouteId={selectedRouteId}
+          matchedRouteIds={matchedRouteIds}
           selectedVehicleId={selectedVehicleId}
           showAllRoutesOnMount={showAllRoutesOnMount}
           onSelectVehicle={onSelectVehicle}

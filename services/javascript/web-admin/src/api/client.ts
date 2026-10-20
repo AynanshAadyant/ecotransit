@@ -7,7 +7,7 @@ import axios from 'axios';
  * and headers to the API Gateway.
  */
 export const apiClient = axios.create({
-  baseURL: import.meta.env['VITE_API_URL'] || '/api/admin',
+  baseURL: import.meta.env['VITE_API_URL'] || 'http://localhost:4000/api/admin',
   timeout: 10000,
   withCredentials: true,
   headers: {

@@ -28,11 +28,21 @@ export class RedisLivePositionRepository implements ILivePositionRepository {
 
     const results = (await pipeline.exec()) as unknown as (Record<string, string> | null)[];
     const positions: LivePosition[] = [];
+    const staleVehicleIds: string[] = [];
 
-    for (const data of results) {
+    for (let i = 0; i < vehicleIds.length; i++) {
+      const data = results[i];
+      const vid = vehicleIds[i];
       if (data && typeof data === 'object' && Object.keys(data).length > 0 && data['vehicle_id']) {
         positions.push(this.mapHashToPosition(data));
+      } else if (vid) {
+        staleVehicleIds.push(vid);
       }
+    }
+
+    if (staleVehicleIds.length > 0) {
+      // Opportunistically prune expired vehicles from the geospatial index to prevent memory leak
+      this.redisClient.zRem(geoKey, staleVehicleIds).catch(() => {});
     }
 
     return positions;

@@ -169,20 +169,162 @@ export const SearchResults: React.FC = () => {
     return (
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '24px 32px',
-          background: 'rgba(15, 23, 42, 0.88)',
-          backdropFilter: 'blur(16px)',
+          background: 'rgba(9, 13, 22, 0.96)',
+          backdropFilter: 'blur(20px)',
           borderTop: '1px solid rgba(255,255,255,0.08)',
-          color: '#94a3b8',
-          fontSize: '20px',
+          padding: '24px 32px 32px',
         }}
       >
-        <span style={{ display: 'inline-block', animation: 'spin 0.8s linear infinite' }}>🔄</span>
-        Searching transit options…
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        {/* Route header with Finding Route status */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '18px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {origin || 'Origin'} → {destination || 'Destination'}
+            </span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#10b981',
+                fontSize: '14px',
+                fontWeight: 700,
+                padding: '4px 14px',
+                borderRadius: '20px',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  animation: 'pulse 1s infinite',
+                }}
+              />
+              Finding Route...
+            </span>
+          </div>
+
+          <div style={{ fontSize: '13px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                display: 'inline-block',
+                width: '12px',
+                height: '12px',
+                border: '2px solid rgba(16, 185, 129, 0.3)',
+                borderTopColor: '#10b981',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }}
+            />
+            <span>Matching stop clusters & corridor transit routes...</span>
+          </div>
+        </div>
+
+        {/* Shimmering Journey Card Skeletons */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            overflowX: 'auto',
+            paddingBottom: '4px',
+            scrollbarWidth: 'none',
+          }}
+        >
+          {[1, 2].map((key) => (
+            <div
+              key={key}
+              style={{
+                minWidth: '360px',
+                flex: '0 0 auto',
+                background: 'rgba(15, 23, 42, 0.6)',
+                backdropFilter: 'blur(12px)',
+                border: '1.5px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '20px',
+                padding: '24px 32px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Header skeleton */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div
+                    style={{
+                      width: '120px',
+                      height: '28px',
+                      background: 'rgba(255,255,255,0.06)',
+                      borderRadius: '6px',
+                      animation: 'skeleton-shimmer 1.5s infinite linear',
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: '160px',
+                      height: '16px',
+                      background: 'rgba(255,255,255,0.04)',
+                      borderRadius: '4px',
+                      animation: 'skeleton-shimmer 1.5s infinite linear',
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    width: '60px',
+                    height: '32px',
+                    background: 'rgba(16, 185, 129, 0.08)',
+                    borderRadius: '12px',
+                    animation: 'skeleton-shimmer 1.5s infinite linear',
+                  }}
+                />
+              </div>
+
+              {/* Segment line skeleton */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '70px',
+                    height: '24px',
+                    background: 'rgba(255,255,255,0.08)',
+                    borderRadius: '6px',
+                    animation: 'skeleton-shimmer 1.5s infinite linear',
+                  }}
+                />
+                <div
+                  style={{
+                    flex: 1,
+                    height: '18px',
+                    background: 'rgba(255,255,255,0.04)',
+                    borderRadius: '4px',
+                    animation: 'skeleton-shimmer 1.5s infinite linear',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+          }
+          @keyframes skeleton-shimmer {
+            0% { opacity: 0.35; }
+            50% { opacity: 0.75; }
+            100% { opacity: 0.35; }
+          }
+        `}</style>
       </div>
     );
   }

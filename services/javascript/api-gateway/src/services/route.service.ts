@@ -34,6 +34,7 @@ export class RouteService {
   async findJourneys(
     originStopId: string,
     destinationStopId: string,
+    radiusM = 800,
   ): Promise<DirectJourneyResult[]> {
     if (originStopId === destinationStopId) {
       throw new ValidationError('Origin and destination stops must be distinct');
@@ -51,7 +52,38 @@ export class RouteService {
       throw new NotFoundError('Destination stop', destinationStopId);
     }
 
-    return this.routeRepo.findDirectJourneys(originStopId, destinationStopId);
+    // Spatial cluster search: expand both origin and destination into complete stop clusters
+    const [fromClusterStops, toClusterStops] = await Promise.all([
+      this.stopRepo.findClusterStops
+        ? this.stopRepo.findClusterStops(originStopId, radiusM)
+        : this.stopRepo.findNearby(originStop.latitude, originStop.longitude, radiusM),
+      this.stopRepo.findClusterStops
+        ? this.stopRepo.findClusterStops(destinationStopId, radiusM)
+        : this.stopRepo.findNearby(destStop.latitude, destStop.longitude, radiusM),
+    ]);
+
+    const originStopIds = Array.from(new Set([originStopId, ...fromClusterStops.map((s) => s.stopId)]));
+    const destStopIds = Array.from(new Set([destinationStopId, ...toClusterStops.map((s) => s.stopId)]));
+
+    const journeys = await this.routeRepo.findDirectJourneysBetweenStopSets(
+      originStopIds,
+      destStopIds,
+    );
+
+    // Group by route so all distinct matching routes between the clusters are visible
+    const routeBestJourney = new Map<string, DirectJourneyResult>();
+    for (const j of journeys) {
+      if (j.originStop.stopId === j.destinationStop.stopId) continue;
+      const routeId = j.route.routeId;
+      const existing = routeBestJourney.get(routeId);
+      if (!existing || j.stopsBetween < existing.stopsBetween) {
+        routeBestJourney.set(routeId, j);
+      }
+    }
+
+    return Array.from(routeBestJourney.values()).sort(
+      (a, b) => a.stopsBetween - b.stopsBetween,
+    );
   }
 
   async findJourneysByCoordinates(
@@ -70,22 +102,27 @@ export class RouteService {
       return [];
     }
 
-    const journeyMap = new Map<string, DirectJourneyResult>();
+    const originStopIds = originStops.map((s) => s.stopId);
+    const destStopIds = destStops.map((s) => s.stopId);
 
-    for (const orig of originStops) {
-      for (const dest of destStops) {
-        if (orig.stopId === dest.stopId) continue;
-        const journeys = await this.routeRepo.findDirectJourneys(orig.stopId, dest.stopId);
-        for (const j of journeys) {
-          const key = `${j.route.routeId}:${j.originStop.stopId}:${j.destinationStop.stopId}`;
-          if (!journeyMap.has(key)) {
-            journeyMap.set(key, j);
-          }
-        }
+    // Perform batched single-query corridor lookup across all cluster stops
+    const journeys = await this.routeRepo.findDirectJourneysBetweenStopSets(
+      originStopIds,
+      destStopIds,
+    );
+
+    // Group by route so all distinct matching routes between both stop clusters are visible
+    const routeBestJourney = new Map<string, DirectJourneyResult>();
+    for (const j of journeys) {
+      if (j.originStop.stopId === j.destinationStop.stopId) continue;
+      const routeId = j.route.routeId;
+      const existing = routeBestJourney.get(routeId);
+      if (!existing || j.stopsBetween < existing.stopsBetween) {
+        routeBestJourney.set(routeId, j);
       }
     }
 
-    return Array.from(journeyMap.values()).sort(
+    return Array.from(routeBestJourney.values()).sort(
       (a, b) => a.stopsBetween - b.stopsBetween,
     );
   }

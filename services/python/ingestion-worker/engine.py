@@ -45,6 +45,8 @@ class IngestionEngine:
         metrics: IMetricsRecorder,
         batch_size: int = 100,
         flush_interval_ms: int = 2000,
+        max_retries: int = 3,
+        backoff_factor: float = 1.5,
     ) -> None:
         self.source = source
         self.parsers = parsers
@@ -53,6 +55,8 @@ class IngestionEngine:
         self.metrics = metrics
         self.batch_size = batch_size
         self.flush_interval_seconds = flush_interval_ms / 1000.0
+        self.max_retries = max_retries
+        self.backoff_factor = backoff_factor
 
         self._buffer: list[VehiclePosition] = []
         self._lock = asyncio.Lock()
@@ -63,7 +67,7 @@ class IngestionEngine:
         self.logger = logger
 
     async def flush(self) -> int:
-        """Flushes buffered vehicle positions to the sink."""
+        """Flushes buffered vehicle positions to the sink with retry for critical sinks."""
         async with self._lock:
             if not self._buffer:
                 return 0
@@ -73,30 +77,53 @@ class IngestionEngine:
             self._last_flush_time = time.time()
 
         start_time = time.time()
-        try:
-            await self.sink.write(batch)
-            duration_ms = (time.time() - start_time) * 1000.0
-            self.metrics.record_batch_flushed(len(batch), duration_ms)
-            self.metrics.record_sink_write(
-                sink_name=self.sink.__class__.__name__,
-                count=len(batch),
-                duration_ms=duration_ms,
-                success=True,
-            )
-            logger.info("Flushed %d positions to sink %s in %.2f ms", len(batch), self.sink.__class__.__name__, duration_ms)
-            return len(batch)
-        except Exception as exc:
-            duration_ms = (time.time() - start_time) * 1000.0
-            self.metrics.record_sink_write(
-                sink_name=self.sink.__class__.__name__,
-                count=len(batch),
-                duration_ms=duration_ms,
-                success=False,
-            )
-            logger.error("Error writing batch to sink: %s", exc)
-            if self.sink.is_critical:
-                raise
-            return 0
+        attempt = 0
+        current_delay = 0.1
+        last_exception: Exception | None = None
+
+        while attempt <= (self.max_retries if self.sink.is_critical else 0):
+            attempt += 1
+            try:
+                await self.sink.write(batch)
+                duration_ms = (time.time() - start_time) * 1000.0
+                self.metrics.record_batch_flushed(len(batch), duration_ms)
+                self.metrics.record_sink_write(
+                    sink_name=self.sink.__class__.__name__,
+                    count=len(batch),
+                    duration_ms=duration_ms,
+                    success=True,
+                )
+                logger.info("Flushed %d positions to sink %s in %.2f ms", len(batch), self.sink.__class__.__name__, duration_ms)
+                return len(batch)
+            except Exception as exc:
+                last_exception = exc
+                if self.sink.is_critical and attempt <= self.max_retries:
+                    logger.warning(
+                        "Critical sink write attempt %d/%d failed: %s. Retrying in %.2fs...",
+                        attempt,
+                        self.max_retries,
+                        exc,
+                        current_delay,
+                    )
+                    await asyncio.sleep(current_delay)
+                    current_delay *= self.backoff_factor
+                else:
+                    break
+
+        duration_ms = (time.time() - start_time) * 1000.0
+        self.metrics.record_sink_write(
+            sink_name=self.sink.__class__.__name__,
+            count=len(batch),
+            duration_ms=duration_ms,
+            success=False,
+        )
+        logger.error("Error writing batch to sink after %d attempts: %s", attempt, last_exception)
+        if self.sink.is_critical:
+            # Re-queue batch back into buffer so it is not dropped
+            async with self._lock:
+                self._buffer = batch + self._buffer
+            raise last_exception or RuntimeError("Critical sink write failed")
+        return 0
 
     async def _timer_flush_loop(self) -> None:
         """Background periodic flusher ensuring quiet periods still persist promptly."""
@@ -144,7 +171,14 @@ class IngestionEngine:
                             self._buffer.append(pos)
                             should_flush = len(self._buffer) >= self.batch_size
                         if should_flush:
-                            await self.flush()
+                            try:
+                                await self.flush()
+                            except Exception as flush_exc:
+                                logger.error(
+                                    "Critical sink flush failed, buffered %d items for retry: %s",
+                                    len(self._buffer),
+                                    flush_exc,
+                                )
                     else:
                         rule_code = validation_res.failed_rule or "UNKNOWN"
                         self.metrics.record_validation_rejected(rule_code, 1)
@@ -175,6 +209,11 @@ class IngestionEngine:
         if self._buffer:
             logger.info("Draining final %d buffered positions before shutdown", len(self._buffer))
             await self.flush()
+
+        if hasattr(self.sink, "aclose") and callable(self.sink.aclose):
+            await self.sink.aclose()
+        elif hasattr(self.sink, "close") and callable(self.sink.close):
+            self.sink.close()
 
         await self.source.close()
         logger.info("IngestionEngine stopped gracefully")

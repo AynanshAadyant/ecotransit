@@ -13,7 +13,7 @@ export class StopController extends BaseController {
 
   getNearby = this.handle(async (req) => {
     const query = NearbyStopsQuerySchema.parse(req.query);
-    return this.stopService.getNearbyStops(query.lat, query.lon, query.radius);
+    return this.stopService.getNearbyStops(query.lat, query.lon, query.radius, query.limit);
   });
 
   search = this.handle(async (req) => {
