@@ -39,7 +39,7 @@ export function requireAuth(issuer: ITokenIssuer): RequestHandler {
       if (err instanceof UnauthorizedError) {
         next(err);
       } else {
-        next(new UnauthorizedError((err as Error).message));
+        next(err);
       }
     }
   };

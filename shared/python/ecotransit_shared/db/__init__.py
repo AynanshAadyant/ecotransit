@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from config import DatabaseSettings, RedisSettings
+from ecotransit_shared.config import DatabaseSettings, RedisSettings
 
 # --- Shared Redis Key Builders ---
 

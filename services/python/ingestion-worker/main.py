@@ -28,6 +28,7 @@ from config import IngestionWorkerSettings, load_settings  # noqa: E402
 from engine import IngestionEngine, ParserRegistry  # noqa: E402
 from metrics import InMemoryMetricsRecorder  # noqa: E402
 from parsers.gtfs_protobuf import GtfsProtobufParser  # noqa: E402
+from sinks.csv_sink import CsvSink  # noqa: E402
 from sinks.fan_out import FanOutSink  # noqa: E402
 from sinks.postgres_sink import PostgresArchiveSink  # noqa: E402
 from sinks.redis_sink import RedisPositionSink  # noqa: E402
@@ -48,10 +49,12 @@ def build_engine(
     settings: IngestionWorkerSettings,
     redis_client: Any,
     db_pool: Any,
-    logger: Any,
+    logger: Any = None,
     custom_feed_client: Any = None,
 ) -> IngestionEngine:
     """Builds and wires the IngestionEngine with all configured components."""
+    if logger is None:
+        logger = create_logger("ingestion.engine")
     # 1. Service-specific abstraction layers
     logger.info("Initializing feed client...")
     feed_client = custom_feed_client or DelhiOtdFeedClient(
@@ -85,11 +88,30 @@ def build_engine(
         DuplicatePingRule(),
     ])
     logger.info("Validation chain initialized with CoordinateBoundsRule, SpeedPlausibilityRule, TimestampFreshnessRule, and DuplicatePingRule.")
-    sinks = FanOutSink([
+    child_sinks = [
         RedisPositionSink(store=redis_store, ttl_seconds=settings.redis_ttl_seconds),
         PostgresArchiveSink(store=postgres_store),
-    ])
-    logger.info("Fan-out sink initialized with RedisPositionSink and PostgresArchiveSink.")
+    ]
+    if settings.csv_sink_enabled:
+        csv_dir = Path(settings.csv_sink_directory)
+        if not csv_dir.is_absolute():
+            csv_dir = workspace_root / csv_dir
+        csv_sink = CsvSink(
+            output_dir=csv_dir,
+            max_bytes=settings.csv_sink_max_bytes,
+        )
+        child_sinks.append(csv_sink)
+        logger.info(
+            "CSV snapshot sink initialized at %s (max_bytes=%d).",
+            csv_dir,
+            settings.csv_sink_max_bytes,
+        )
+
+    sinks = FanOutSink(child_sinks)
+    logger.info(
+        "Fan-out sink initialized with %s.",
+        ", ".join(s.__class__.__name__ for s in child_sinks),
+    )
     metrics = InMemoryMetricsRecorder()
     logger.info("In-memory metrics recorder initialized.")
 
@@ -99,7 +121,7 @@ def build_engine(
         validation=validation,
         sink=sinks,
         metrics=metrics,
-        batch_size=5000,
+        batch_size=settings.batch_size,
         flush_interval_ms=settings.flush_interval_ms,
     )
 

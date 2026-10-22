@@ -74,6 +74,20 @@ class IngestionWorkerSettings(BaseSettings):
         alias="INGESTION_FLUSH_INTERVAL_MS",
     )
 
+    # Local Telemetry CSV Snapshot Sink
+    csv_sink_enabled: bool = Field(
+        default=True,
+        alias="CSV_SINK_ENABLED",
+    )
+    csv_sink_directory: str = Field(
+        default="data/snapshots",
+        alias="CSV_SINK_DIRECTORY",
+    )
+    csv_sink_max_bytes: int = Field(
+        default=200 * 1024 * 1024,  # 200MB size cap
+        alias="CSV_SINK_MAX_BYTES",
+    )
+
     # Domain Validation thresholds
     max_age_seconds: int = Field(
         default=120,

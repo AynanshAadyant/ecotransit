@@ -1,4 +1,5 @@
-"""Service-specific Redis Live Position Store Abstraction.
+"""
+Service-specific Redis Live Position Store Abstraction.
 
 Encapsulates all Redis hot-telemetry storage operations (Hashes, TTL, Geospatial, Route Sets)
 while coordinating with the shared Redis driver from ecotransit_shared.db.
@@ -50,36 +51,41 @@ class RedisLiveStore(IRedisLiveStore):
             return 0
 
         geo_key = vehicle_geo_key()
-        pipe = self._client.pipeline(transaction=False)
+        chunk_size = 500
 
-        for pos in positions:
-            pos_key = vehicle_live_key(pos.vehicle_id)
-            mapping: dict[str, str] = {
-                "vehicle_id": pos.vehicle_id,
-                "route_id": pos.route_id,
-                "latitude": str(pos.latitude),
-                "longitude": str(pos.longitude),
-                "speed": str(pos.speed if pos.speed is not None else 0.0),
-                "bearing": str(pos.bearing if pos.bearing is not None else 0.0),
-                "timestamp": str(pos.timestamp),
-                "is_speed_suspect": "1" if pos.is_speed_suspect else "0",
-            }
-            if pos.trip_id is not None:
-                mapping["trip_id"] = pos.trip_id
+        for i in range(0, len(positions), chunk_size):
+            chunk = positions[i : i + chunk_size]
+            pipe = self._client.pipeline(transaction=False)
 
-            pipe.hset(pos_key, mapping=mapping)
-            pipe.expire(pos_key, ttl_seconds)
+            for pos in chunk:
+                pos_key = vehicle_live_key(pos.vehicle_id)
+                mapping: dict[str, str] = {
+                    "vehicle_id": pos.vehicle_id,
+                    "route_id": pos.route_id,
+                    "latitude": str(pos.latitude),
+                    "longitude": str(pos.longitude),
+                    "speed": str(pos.speed if pos.speed is not None else 0.0),
+                    "bearing": str(pos.bearing if pos.bearing is not None else 0.0),
+                    "timestamp": str(pos.timestamp),
+                    "is_speed_suspect": "1" if pos.is_speed_suspect else "0",
+                }
+                if pos.trip_id is not None:
+                    mapping["trip_id"] = pos.trip_id
 
-            # Geospatial indexing (longitude, latitude, member)
-            pipe.geoadd(geo_key, [pos.longitude, pos.latitude, pos.vehicle_id])
+                pipe.hset(pos_key, mapping=mapping)
+                pipe.expire(pos_key, ttl_seconds)
 
-            # Route set membership
-            if pos.route_id:
-                route_key = route_live_key(pos.route_id)
-                pipe.sadd(route_key, pos.vehicle_id)
-                pipe.expire(route_key, ttl_seconds)
+                # Geospatial indexing (longitude, latitude, member)
+                pipe.geoadd(geo_key, [pos.longitude, pos.latitude, pos.vehicle_id])
 
-        await pipe.execute()
+                # Route set membership
+                if pos.route_id:
+                    route_key = route_live_key(pos.route_id)
+                    pipe.sadd(route_key, pos.vehicle_id)
+                    pipe.expire(route_key, ttl_seconds)
+
+            await pipe.execute()
+
         return len(positions)
 
     async def ping(self) -> bool:

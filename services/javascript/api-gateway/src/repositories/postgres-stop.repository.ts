@@ -50,7 +50,7 @@ export class PostgresStopRepository extends BaseRepository implements IStopRepos
     return this.mapRowToStop(row);
   }
 
-  async findNearby(lat: number, lon: number, radiusM: number): Promise<Stop[]> {
+  async findNearby(lat: number, lon: number, radiusM: number, limit = 150): Promise<Stop[]> {
     // Haversine formula SQL query
     const sql = `
       SELECT stop_id, stop_name, latitude, longitude, cluster_id,
@@ -69,9 +69,10 @@ export class PostgresStopRepository extends BaseRepository implements IStopRepos
                  sin(radians($1)) * sin(radians(latitude))
                ))
              )) <= $3
-      ORDER BY distance_meters ASC;
+      ORDER BY distance_meters ASC
+      LIMIT $4;
     `;
-    const rows = await this.query<RawStopRow>(sql, [lat, lon, radiusM]);
+    const rows = await this.query<RawStopRow>(sql, [lat, lon, radiusM, limit]);
     return rows.map((r) => this.mapRowToStop(r));
   }
 
@@ -117,7 +118,10 @@ export class PostgresStopRepository extends BaseRepository implements IStopRepos
       // Advance to the next downstream stop sequence on this route.
       if (dotProduct < 0) {
         const currentSeq = nearestCandidate.stop_sequence;
-        const nextCandidate = candidates.find((c) => c.stop_sequence > currentSeq);
+        const downstreamCandidates = candidates
+          .filter((c) => c.stop_sequence > currentSeq)
+          .sort((a, b) => a.stop_sequence - b.stop_sequence);
+        const nextCandidate = downstreamCandidates[0];
         if (nextCandidate) {
           return {
             stopId: nextCandidate.stop_id,
@@ -161,6 +165,64 @@ export class PostgresStopRepository extends BaseRepository implements IStopRepos
       LIMIT $2;
     `;
     const rows = await this.query<RawStopRow>(sql, [queryStr, limit]);
+    return rows.map((r) => this.mapRowToStop(r));
+  }
+
+  async findClusterStops(stopId: string, radiusM = 800): Promise<Stop[]> {
+    const baseStop = await this.findById(stopId);
+    if (!baseStop) return [];
+
+    const baseName = baseStop.stopName
+      ? baseStop.stopName.split('(')[0]?.trim().toLowerCase()
+      : '';
+
+    // Spatial cluster search:
+    // 1. Exact stop ID
+    // 2. Stops sharing the same GTFS cluster_id (if present)
+    // 3. Stops within the spatial search radius (e.g. 800m) of this stop
+    // 4. Stops sharing the same base name within 2km (opposite platforms, cluster points)
+    const sql = `
+      SELECT stop_id, stop_name, latitude, longitude, cluster_id,
+             (6371000 * acos(
+               LEAST(1.0, GREATEST(-1.0,
+                 cos(radians($2)) * cos(radians(latitude)) *
+                 cos(radians(longitude) - radians($3)) +
+                 sin(radians($2)) * sin(radians(latitude))
+               ))
+             )) AS distance_meters
+      FROM stops
+      WHERE stop_id = $1
+        OR ($4::text IS NOT NULL AND cluster_id = $4)
+        OR (6371000 * acos(
+              LEAST(1.0, GREATEST(-1.0,
+                cos(radians($2)) * cos(radians(latitude)) *
+                cos(radians(longitude) - radians($3)) +
+                sin(radians($2)) * sin(radians(latitude))
+              ))
+            )) <= $5
+        OR (
+          $6::text <> '' AND stop_name ILIKE '%' || $6 || '%'
+          AND (6371000 * acos(
+                LEAST(1.0, GREATEST(-1.0,
+                  cos(radians($2)) * cos(radians(latitude)) *
+                  cos(radians(longitude) - radians($3)) +
+                  sin(radians($2)) * sin(radians(latitude))
+                ))
+              )) <= 2000
+        )
+      ORDER BY distance_meters ASC
+      LIMIT 100;
+    `;
+
+    const rows = await this.query<RawStopRow>(sql, [
+      stopId,
+      baseStop.latitude,
+      baseStop.longitude,
+      baseStop.clusterId || null,
+      radiusM,
+      baseName,
+    ]);
+
     return rows.map((r) => this.mapRowToStop(r));
   }
 

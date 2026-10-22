@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import { ZodError } from 'zod';
 import { AppError } from '../errors/index.js';
 
 export function asyncHandler(
@@ -64,8 +65,25 @@ export function errorMiddleware(
     return;
   }
 
+  if (err instanceof ZodError || (err instanceof Error && err.name === 'ZodError')) {
+    const issues = (err as ZodError).issues || (err as unknown as { errors: unknown }).errors;
+    res.status(400).json({
+      error: {
+        code: 'validation_error',
+        message: 'Invalid request parameters',
+        details: issues,
+      },
+    });
+    return;
+  }
+
   // Fallback for unhandled errors
-  const message = err instanceof Error ? err.message : 'Internal server error';
+  const isProduction = process.env['NODE_ENV'] === 'production';
+  const message = isProduction
+    ? 'An unexpected internal server error occurred'
+    : err instanceof Error
+      ? err.message
+      : 'Internal server error';
   console.error('[UnhandledError]', err);
   res.status(500).json({
     error: {

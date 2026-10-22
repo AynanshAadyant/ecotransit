@@ -2,6 +2,7 @@
 -- Description: Baseline schema for EcoTransit core entities
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "postgis";
 
 -- 1. Transit Network Entities
 CREATE TABLE IF NOT EXISTS stops (
@@ -30,6 +31,9 @@ CREATE TABLE IF NOT EXISTS route_stops (
     stop_sequence INTEGER NOT NULL,
     PRIMARY KEY (route_id, stop_sequence)
 );
+
+CREATE INDEX IF NOT EXISTS idx_route_stops_stop_id ON route_stops (stop_id);
+CREATE INDEX IF NOT EXISTS idx_route_stops_route_stop ON route_stops (route_id, stop_id);
 
 CREATE TABLE IF NOT EXISTS route_segments (
     segment_id SERIAL PRIMARY KEY,

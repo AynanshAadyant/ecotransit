@@ -48,7 +48,7 @@ export class MockStopRepository implements IStopRepository {
     return this.stops.get(stopId) ?? null;
   }
 
-  async findNearby(lat: number, lon: number, radiusM: number): Promise<Stop[]> {
+  async findNearby(lat: number, lon: number, radiusM: number, limit = 150): Promise<Stop[]> {
     if (this.shouldFail) throw new Error('Simulated Database query error');
     const result: Stop[] = [];
     for (const stop of this.stops.values()) {
@@ -57,7 +57,7 @@ export class MockStopRepository implements IStopRepository {
         result.push(stop);
       }
     }
-    return result;
+    return result.slice(0, limit);
   }
 
   async findNearestOnRoute(
@@ -142,6 +142,22 @@ export class MockStopRepository implements IStopRepository {
       s.stopName.toLowerCase().includes(q),
     );
   }
+
+  async findClusterStops(stopId: string, radiusM = 800): Promise<Stop[]> {
+    if (this.shouldFail) throw new Error('Simulated Database query error');
+    const baseStop = this.stops.get(stopId);
+    if (!baseStop) return [];
+
+    const result: Stop[] = [baseStop];
+    for (const [id, s] of this.stops.entries()) {
+      if (id === stopId) continue;
+      const dist = calculateHaversine(baseStop.latitude, baseStop.longitude, s.latitude, s.longitude);
+      if (dist <= radiusM || (baseStop.clusterId && s.clusterId === baseStop.clusterId)) {
+        result.push(s);
+      }
+    }
+    return result;
+  }
 }
 
 export class MockRouteRepository implements IRouteRepository {
@@ -165,14 +181,23 @@ export class MockRouteRepository implements IRouteRepository {
     return this.routeStops.get(routeId) ?? [];
   }
 
+  async findDirectJourneysBetweenStopSets(
+    originStopIds: string[],
+    destinationStopIds: string[],
+  ): Promise<DirectJourneyResult[]> {
+    if (this.shouldFail) throw new Error('Simulated Database query error');
+    const origSet = new Set(originStopIds);
+    const destSet = new Set(destinationStopIds);
+    return this.directJourneys.filter(
+      (j) => origSet.has(j.originStop.stopId) && destSet.has(j.destinationStop.stopId),
+    );
+  }
+
   async findDirectJourneys(
     originStopId: string,
     destinationStopId: string,
   ): Promise<DirectJourneyResult[]> {
-    if (this.shouldFail) throw new Error('Simulated Database query error');
-    return this.directJourneys.filter(
-      (j) => j.originStop.stopId === originStopId && j.destinationStop.stopId === destinationStopId,
-    );
+    return this.findDirectJourneysBetweenStopSets([originStopId], [destinationStopId]);
   }
 }
 

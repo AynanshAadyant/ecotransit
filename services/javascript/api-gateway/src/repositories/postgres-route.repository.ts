@@ -99,10 +99,14 @@ export class PostgresRouteRepository extends BaseRepository implements IRouteRep
     }));
   }
 
-  async findDirectJourneys(
-    originStopId: string,
-    destinationStopId: string,
+  async findDirectJourneysBetweenStopSets(
+    originStopIds: string[],
+    destinationStopIds: string[],
   ): Promise<DirectJourneyResult[]> {
+    if (originStopIds.length === 0 || destinationStopIds.length === 0) {
+      return [];
+    }
+
     const sql = `
       SELECT r.route_id, r.route_short_name, r.route_long_name, r.route_type,
              rs_orig.stop_sequence AS origin_sequence,
@@ -117,12 +121,13 @@ export class PostgresRouteRepository extends BaseRepository implements IRouteRep
       JOIN routes r ON r.route_id = rs_orig.route_id
       JOIN stops orig_s ON orig_s.stop_id = rs_orig.stop_id
       JOIN stops dest_s ON dest_s.stop_id = rs_dest.stop_id
-      WHERE rs_orig.stop_id = $1
-        AND rs_dest.stop_id = $2
+      WHERE rs_orig.stop_id = ANY($1)
+        AND rs_dest.stop_id = ANY($2)
         AND rs_orig.stop_sequence < rs_dest.stop_sequence
-      ORDER BY stops_between ASC;
+      ORDER BY stops_between ASC
+      LIMIT 50;
     `;
-    const rows = await this.query<RawDirectJourneyRow>(sql, [originStopId, destinationStopId]);
+    const rows = await this.query<RawDirectJourneyRow>(sql, [originStopIds, destinationStopIds]);
     return rows.map((r) => ({
       route: {
         routeId: r.route_id,
@@ -150,5 +155,12 @@ export class PostgresRouteRepository extends BaseRepository implements IRouteRep
       destinationSequence: r.dest_sequence,
       stopsBetween: r.stops_between,
     }));
+  }
+
+  async findDirectJourneys(
+    originStopId: string,
+    destinationStopId: string,
+  ): Promise<DirectJourneyResult[]> {
+    return this.findDirectJourneysBetweenStopSets([originStopId], [destinationStopId]);
   }
 }

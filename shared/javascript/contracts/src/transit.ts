@@ -3,11 +3,67 @@ import type { TimeBucket } from './common.js';
 
 export interface Stop {
   stopId: string;
-  stopName: string;
+  stopName?: string | undefined;
+  name?: string | undefined;
   displayName?: string | undefined;
   latitude: number;
   longitude: number;
   clusterId?: string | undefined;
+  routeIds?: string[] | undefined;
+}
+
+export interface RouteGeometry {
+  routeId: string;
+  name: string;
+  color: string;
+  path: [number, number][];
+}
+
+export interface Vehicle {
+  vehicleId: string;
+  routeId: string;
+  latitude: number;
+  longitude: number;
+  speed?: number | undefined;
+  heading?: number | undefined;
+  occupancyStatus?: string | undefined;
+  timestamp?: string | number | undefined;
+}
+
+export interface JourneySegment {
+  segmentId: string;
+  routeId: string;
+  routeName: string;
+  fromStop: string;
+  toStop: string;
+  departureTime: string;
+  arrivalTime: string;
+  durationMinutes: number;
+}
+
+export interface JourneyResult {
+  journeyId: string;
+  origin: string;
+  destination: string;
+  totalDurationMinutes: number;
+  fare: number;
+  segments: JourneySegment[];
+}
+
+export interface EtaResponse {
+  routeId: string;
+  segmentId: string;
+  eta_seconds: number;
+  variance_total: number;
+  weakest_cell_support: number;
+}
+
+export interface HeatmapBucket {
+  segmentId: string | number;
+  intensity?: number | undefined;
+  speedKmh?: number | undefined;
+  congestionScore?: number | undefined;
+  [key: string]: unknown;
 }
 
 export interface RouteSummary {
@@ -92,7 +148,7 @@ export interface IRouteSegmentRepository {
 }
 
 export interface IStopRepository {
-  findNearby(lat: number, lon: number, radiusM: number): Promise<Stop[]>;
+  findNearby(lat: number, lon: number, radiusM: number, limit?: number): Promise<Stop[]>;
   findNearestOnRoute(
     routeId: string,
     lat: number,
@@ -102,6 +158,7 @@ export interface IStopRepository {
   findRoutesServingStop(stopId: string): Promise<RouteSummary[]>;
   searchByName(query: string, limit?: number): Promise<Stop[]>;
   findById(stopId: string): Promise<Stop | null>;
+  findClusterStops(stopId: string, radiusM?: number): Promise<Stop[]>;
 }
 
 export interface IRouteRepository {
@@ -111,6 +168,10 @@ export interface IRouteRepository {
   findDirectJourneys(
     originStopId: string,
     destinationStopId: string,
+  ): Promise<DirectJourneyResult[]>;
+  findDirectJourneysBetweenStopSets(
+    originStopIds: string[],
+    destinationStopIds: string[],
   ): Promise<DirectJourneyResult[]>;
 }
 

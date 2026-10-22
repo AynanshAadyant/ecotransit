@@ -36,7 +36,9 @@
       "@ecotransit/auth": ["./shared/javascript/auth/src/index.ts"],
       "@ecotransit/auth/*": ["./shared/javascript/auth/src/*"],
       "@ecotransit/data-access": ["./shared/javascript/data-access/src/index.ts"],
-      "@ecotransit/data-access/*": ["./shared/javascript/data-access/src/*"]
+      "@ecotransit/data-access/*": ["./shared/javascript/data-access/src/*"],
+      "@ecotransit/ui": ["./shared/javascript/ui/src/index.ts"],
+      "@ecotransit/ui/*": ["./shared/javascript/ui/src/*"]
     }
   },
   "exclude": [

@@ -15,6 +15,7 @@ The **Ingestion Worker** is a high-throughput, resilient Python microservice res
 - **Concurrent Fan-Out with Selective Criticality**:
   - `RedisPositionSink` is **critical**: write failures abort and retry the batch to prevent stale live maps.
   - `PostgresArchiveSink` is **non-critical**: database hiccups are recorded without dropping live tracking.
+  - `CsvSink` is **non-critical**: writes periodic local snapshot telemetry files via an open write stream with a 200MB size cap rotation.
 - **Dual Batch Flush Mechanism**:
   - Batches flush upon reaching `INGESTION_BATCH_SIZE` (default: 100) or elapsed timer `INGESTION_FLUSH_INTERVAL_MS` (default: 2000ms), preventing telemetry stagnation during quiet periods.
 
@@ -53,13 +54,18 @@ The **Ingestion Worker** is a high-throughput, resilient Python microservice res
                        ┌──────────────▼──────────────┐
                        │          ISink              │ [Composite FanOutSink]
                        │       (FanOutSink)          │ (asyncio.gather concurrency)
-                       └──────┬──────────────┬───────┘
-                              │              │
-             ┌────────────────▼──┐        ┌──▼────────────────┐
-             │ RedisPositionSink │        │PostgresArchiveSink│
-             │    (CRITICAL)     │        │   (NON-CRITICAL)  │
-             └────────┬──────────┘        └─────────┬─────────┘
-                      │                             │
+                       └──────┬──────┬───────────────┘
+                              │      │        │
+                              │      │        └──────────────────┐
+             ┌────────────────▼──┐ ┌─▼────────────────┐ ┌────────▼─────────┐
+             │ RedisPositionSink │ │PostgresArchiveSink│ │     CsvSink     │
+             │    (CRITICAL)     │ │   (NON-CRITICAL)  │ │  (NON-CRITICAL) │
+             └────────┬──────────┘ └─────────┬─────────┘ └────────┬────────┘
+                      │                      │                    │
+                      │                      │                    ▼
+                      │                      │             Local CSV Snapshot
+                      │                      │          telemetry_{ts}.csv (200MB cap)
+                      │                      │
        ┌──────────────▼─────────────┐ ┌─────────────▼───────────────┐
        │      IRedisLiveStore       │ │    IPostgresArchiveStore    │ [Service Abstraction
        │      (RedisLiveStore)      │ │    (PostgresArchiveStore)   │  Layer]
@@ -96,7 +102,8 @@ services/python/ingestion-worker/
 ├── sinks/
 │   ├── fan_out.py                # FanOutSink (concurrent dispatcher with criticality semantics)
 │   ├── redis_sink.py             # RedisPositionSink (critical live position store)
-│   └── postgres_sink.py          # PostgresArchiveSink (non-critical durable archive store)
+│   ├── postgres_sink.py          # PostgresArchiveSink (non-critical durable archive store)
+│   └── csv_sink.py               # CsvSink (periodic local snapshot write stream with 200MB size cap)
 ├── tooling/                      # Appendix A Data Collection Tools
 │   ├── otd_collector.py          # Appendix A.1 snapshot archiver CLI
 │   └── combine_otd_snapshots.py  # Appendix A.2 6-stage cleaning & flattening CSV CLI
@@ -144,6 +151,9 @@ All settings are configured via the root `.env` file:
 | `INGESTION_FLUSH_INTERVAL_MS`| `int` | `2000` | Max milliseconds before flushing buffered positions |
 | `INGESTION_MAX_AGE_SECONDS` | `int` | `120` | Max telemetry age before position is marked stale |
 | `INGESTION_MAX_SPEED_KMH` | `float` | `80.0` | Maximum plausible speed before position is rejected |
+| `CSV_SINK_ENABLED` | `bool` | `true` | Enable periodic local CSV telemetry snapshot sink |
+| `CSV_SINK_DIRECTORY` | `str` | `data/snapshots` | Directory path where snapshot CSV files are saved |
+| `CSV_SINK_MAX_BYTES` | `int` | `209715200` | Size cap in bytes (default 200MB) before rotating to new file |
 
 ---
 

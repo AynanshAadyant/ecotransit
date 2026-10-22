@@ -1,0 +1,25 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@ecotransit/contracts": ["../../../shared/javascript/contracts/src/index.ts"],
+      "@ecotransit/contracts/*": ["../../../shared/javascript/contracts/src/*"],
+      "@ecotransit/ui": ["../../../shared/javascript/ui/src/index.ts"],
+      "@ecotransit/ui/*": ["../../../shared/javascript/ui/src/*"]
+    }
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "../../../shared/javascript/contracts/src/**/*",
+    "../../../shared/javascript/ui/src/**/*"
+  ]
+}

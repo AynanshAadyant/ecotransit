@@ -29,5 +29,5 @@ def test_build_engine_wiring() -> None:
     )
 
     assert isinstance(engine, IngestionEngine)
-    assert engine.batch_size == 5000
+    assert engine.batch_size == settings.batch_size
     assert engine.flush_interval_seconds == settings.flush_interval_ms / 1000.0
