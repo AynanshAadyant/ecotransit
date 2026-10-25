@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Search, Plus, Trash2, Edit2, Loader2, Route as RouteIcon, MapPin, X } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Route as RouteIcon, MapPin, X , Loader2 } from 'lucide-react';
 import { useRoutesStore } from '../state/routes.store';
 import { useToastStore } from '../state/toast.store';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Pagination from '../components/Pagination';
+import EmptyState from '../components/EmptyState';
+import { TableRowSkeleton } from '../components/Skeleton';
 import type { Route, CreateRoutePayload } from '../api/routes.api';
 
 export default function RoutesPage() {
@@ -135,6 +138,13 @@ export default function RoutesPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 8;
+
+
+
+  const paginatedRoutes = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -168,7 +178,7 @@ export default function RoutesPage() {
             type="text"
             placeholder="Search route name, code, origin, destination..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
@@ -176,7 +186,7 @@ export default function RoutesPage() {
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="all">All Corridors</option>
@@ -206,20 +216,34 @@ export default function RoutesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {loading && routes.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
-                    Querying route schedules...
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRowSkeleton key={i} columns={7} />
+                ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    No routes found matching your criteria.
+                  <td colSpan={7} className="p-4">
+                    <EmptyState
+                      icon={RouteIcon}
+                      title="No route corridors found"
+                      description={
+                        search || statusFilter !== 'all'
+                          ? 'No routes match the current search or filter criteria.'
+                          : 'No transit routes have been configured yet.'
+                      }
+                      action={
+                        search || statusFilter !== 'all'
+                          ? undefined
+                          : {
+                              label: 'Create First Route',
+                              onClick: openCreateModal,
+                              icon: Plus,
+                            }
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => {
+                paginatedRoutes.map((r) => {
                   const code = r.routeCode || r.route_code || '—';
                   const originText = r.origin || 'Depot Terminal';
                   const destText = r.destination || 'Downtown Terminal';
@@ -253,11 +277,7 @@ export default function RoutesPage() {
                               : 'bg-slate-50 text-slate-600 border-slate-200'
                           }`}
                         >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              r.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'
-                            }`}
-                          ></span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${r.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
                           {r.status}
                         </span>
                       </td>
@@ -287,6 +307,12 @@ export default function RoutesPage() {
           </table>
         </div>
       </div>
+        <Pagination
+          currentPage={page}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
 
       {/* Create / Edit Route Modal */}
       {modalOpen && (

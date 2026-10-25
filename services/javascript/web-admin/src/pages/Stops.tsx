@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Search, Plus, Trash2, Edit2, Loader2, MapPin, LocateFixed, X } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, MapPin, LocateFixed, X , Loader2 } from 'lucide-react';
 import { useStopsStore } from '../state/stops.store';
 import { useToastStore } from '../state/toast.store';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Pagination from '../components/Pagination';
+import EmptyState from '../components/EmptyState';
+import { TableRowSkeleton } from '../components/Skeleton';
 import type { Stop, CreateStopPayload } from '../api/stops.api';
 
 export default function StopsPage() {
@@ -152,6 +155,13 @@ export default function StopsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+
+
+  const paginatedStops = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -185,7 +195,7 @@ export default function StopsPage() {
             type="text"
             placeholder="Search stop name, code, landmark..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
@@ -193,7 +203,7 @@ export default function StopsPage() {
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="all">All Terminals</option>
@@ -223,20 +233,34 @@ export default function StopsPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {loading && stops.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
-                    Querying stop coordinates...
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRowSkeleton key={i} columns={7} />
+                ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    No stops found matching your search.
+                  <td colSpan={7} className="p-4">
+                    <EmptyState
+                      icon={MapPin}
+                      title="No stop terminals found"
+                      description={
+                        search || statusFilter !== 'all'
+                          ? 'No stops match the current search or filter criteria.'
+                          : 'No transit stop terminals have been configured yet.'
+                      }
+                      action={
+                        search || statusFilter !== 'all'
+                          ? undefined
+                          : {
+                              label: 'Add First Stop',
+                              onClick: openCreateModal,
+                              icon: Plus,
+                            }
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
-                filtered.map((s) => {
+                paginatedStops.map((s) => {
                   const code = s.stopCode || s.stop_code || '—';
 
                   return (
@@ -299,6 +323,12 @@ export default function StopsPage() {
           </table>
         </div>
       </div>
+        <Pagination
+          currentPage={page}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
 
       {/* Create / Edit Stop Modal */}
       {modalOpen && (
