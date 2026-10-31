@@ -2,28 +2,38 @@ import client from './client';
 
 export interface Vehicle {
   id: number;
-  vehicle_number: string;
-  registration_number: string;
-  type: string;
-  capacity: number;
+  vehicle_number?: string;
+  vehicleNumber?: string;
+  registration_number?: string;
+  registrationNumber?: string;
+  type?: string;
+  vehicleType?: string;
+  capacity?: number;
   status: string;
-  route_id: number | null;
-  gps_device_id: string | null;
-  created_at: string;
-  updated_at: string;
+  route_id?: number | null;
+  routeId?: number | null;
+  gps_device_id?: string | null;
+  deviceId?: string | null;
+  routeName?: string;
+  routeCode?: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
 }
 
 export interface CreateVehiclePayload {
-  vehicle_number: string;
-  registration_number: string;
-  type?: string;
+  vehicleNumber: string;
+  registrationNumber: string;
+  vehicleType?: string;
   capacity?: number;
-  route_id?: number;
-  gps_device_id?: string;
+  routeId?: number | null;
+  deviceId?: string | null;
+  status?: string;
 }
 
-export async function fetchVehicles(): Promise<Vehicle[]> {
-  const { data } = await client.get('/admin/vehicles');
+export async function fetchVehicles(filters?: { status?: string; routeId?: number }): Promise<Vehicle[]> {
+  const { data } = await client.get('/admin/vehicles', { params: filters });
   return data.data ?? data;
 }
 
