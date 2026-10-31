@@ -8,14 +8,18 @@ import {
   UserCheck,
   Check,
   X,
-  Loader2,
+
   Eye,
   Filter,
+  Loader2,
 } from 'lucide-react';
 import { useIncidentsStore } from '../state/incidents.store';
 import { useToastStore } from '../state/toast.store';
 import { fetchStaff, type Staff } from '../api/staff.api';
 import type { Incident } from '../api/incidents.api';
+import Pagination from '../components/Pagination';
+import EmptyState from '../components/EmptyState';
+import { TableRowSkeleton } from '../components/Skeleton';
 
 export default function Incidents() {
   const {
@@ -133,6 +137,13 @@ export default function Incidents() {
     return matchesStatus && matchesSeverity && matchesSearch;
   });
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+
+
+  const paginatedIncidents = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -158,7 +169,7 @@ export default function Incidents() {
             type="text"
             placeholder="Search description, vehicle, reporter..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           />
         </div>
@@ -171,7 +182,7 @@ export default function Incidents() {
             </span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
               <option value="all">All Statuses</option>
@@ -186,7 +197,7 @@ export default function Incidents() {
             <span className="text-xs font-semibold text-slate-500">Severity:</span>
             <select
               value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value)}
+              onChange={(e) => { setSeverityFilter(e.target.value); setPage(1); }}
               className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
               <option value="all">All Severities</option>
@@ -220,20 +231,25 @@ export default function Incidents() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {loading && incidents.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
-                    Querying incident logbook...
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRowSkeleton key={i} columns={7} />
+                ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    No incident records match the active filter criteria.
+                  <td colSpan={7} className="p-4">
+                    <EmptyState
+                      icon={AlertTriangle}
+                      title="No incidents found"
+                      description={
+                        searchTerm || statusFilter !== "all" || severityFilter !== "all"
+                          ? "No incidents match the active filter criteria. Try adjusting your filters."
+                          : "No incidents have been reported yet. The system is clear."
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
-                filtered.map((inc) => (
+                paginatedIncidents.map((inc) => (
                   <tr key={inc.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-4 font-mono font-bold text-slate-700">#{inc.id}</td>
                     <td className="px-6 py-4">
@@ -338,6 +354,12 @@ export default function Incidents() {
           </table>
         </div>
       </div>
+        <Pagination
+          currentPage={page}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
 
       {/* Incident Detail Modal */}
       {detailModalOpen && activeIncident && (
