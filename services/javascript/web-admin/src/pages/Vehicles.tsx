@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Search, Plus, Trash2, Edit2, Loader2, Bus, Filter, X } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Bus, Filter, X , Loader2 } from 'lucide-react';
 import { useVehiclesStore } from '../state/vehicles.store';
 import { useToastStore } from '../state/toast.store';
 import { fetchRoutes, type Route } from '../api/routes.api';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Pagination from '../components/Pagination';
+import EmptyState from '../components/EmptyState';
+import { TableRowSkeleton } from '../components/Skeleton';
 import type { Vehicle, CreateVehiclePayload } from '../api/vehicles.api';
 
 export default function Vehicles() {
@@ -141,6 +144,13 @@ export default function Vehicles() {
     return matchesSearch && matchesStatus;
   });
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 8;
+
+
+
+  const paginatedVehicles = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -174,7 +184,7 @@ export default function Vehicles() {
             type="text"
             placeholder="Search vehicle number, plate, type..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
           />
         </div>
@@ -183,7 +193,7 @@ export default function Vehicles() {
           <Filter className="w-4 h-4 text-slate-400 hidden sm:block" />
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="all">All Statuses</option>
@@ -215,20 +225,34 @@ export default function Vehicles() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {loading && vehicles.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
-                    Querying fleet registry...
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRowSkeleton key={i} columns={8} />
+                ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
-                    No vehicles match your search criteria.
+                  <td colSpan={8} className="p-4">
+                    <EmptyState
+                      icon={Bus}
+                      title="No vehicles found"
+                      description={
+                        search || statusFilter !== 'all'
+                          ? 'No vehicles match your search or filter criteria. Try adjusting your parameters.'
+                          : 'No fleet vehicles are registered in the system yet.'
+                      }
+                      action={
+                        search || statusFilter !== 'all'
+                          ? undefined
+                          : {
+                              label: 'Register First Vehicle',
+                              onClick: openCreateModal,
+                              icon: Plus,
+                            }
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
-                filtered.map((v) => {
+                paginatedVehicles.map((v) => {
                   const num = v.vehicleNumber || v.vehicle_number || `Unit #${v.id}`;
                   const reg = v.registrationNumber || v.registration_number || '—';
                   const type = v.vehicleType || v.type || 'Electric Bus';
@@ -304,6 +328,12 @@ export default function Vehicles() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={page}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* Create / Edit Vehicle Modal */}

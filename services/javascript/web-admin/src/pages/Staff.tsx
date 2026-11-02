@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Search, Plus, Trash2, Edit2, Loader2, Users, Shield, Phone, Mail, X } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Users, Shield, Phone, Mail, X , Loader2 } from 'lucide-react';
 import { useStaffStore } from '../state/staff.store';
 import { useToastStore } from '../state/toast.store';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Pagination from '../components/Pagination';
+import EmptyState from '../components/EmptyState';
+import { TableRowSkeleton } from '../components/Skeleton';
 import type { Staff, CreateStaffPayload } from '../api/staff.api';
 
 export default function StaffPage() {
@@ -139,6 +142,13 @@ export default function StaffPage() {
     return matchesSearch && matchesRole;
   });
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 8;
+
+
+
+  const paginatedStaff = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -172,7 +182,7 @@ export default function StaffPage() {
             type="text"
             placeholder="Search name, email, phone..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
@@ -180,7 +190,7 @@ export default function StaffPage() {
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <select
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="all">All Roles</option>
@@ -210,20 +220,34 @@ export default function StaffPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {loading && staff.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
-                    Querying staff database...
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRowSkeleton key={i} columns={7} />
+                ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    No staff records match your criteria.
+                  <td colSpan={7} className="p-4">
+                    <EmptyState
+                      icon={Users}
+                      title="No staff personnel found"
+                      description={
+                        search || roleFilter !== 'all'
+                          ? 'No staff members match the selected filter or search keyword.'
+                          : 'No staff personnel registered yet.'
+                      }
+                      action={
+                        search || roleFilter !== 'all'
+                          ? undefined
+                          : {
+                              label: 'Add First Staff Member',
+                              onClick: openCreateModal,
+                              icon: Plus,
+                            }
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
-                filtered.map((s) => (
+                paginatedStaff.map((s) => (
                   <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-4 font-mono font-bold text-slate-700">#{s.id}</td>
                     <td className="px-6 py-4">
@@ -302,6 +326,12 @@ export default function StaffPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={page}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* Create / Edit Staff Modal */}
