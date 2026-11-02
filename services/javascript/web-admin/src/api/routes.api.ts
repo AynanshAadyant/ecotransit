@@ -1,17 +1,38 @@
 import client from './client';
 
+export interface RouteStopItem {
+  stopId: number;
+  stopOrder: number;
+  name?: string;
+}
+
 export interface Route {
   id: number;
   name: string;
-  route_code: string;
+  routeCode?: string;
+  route_code?: string;
+  description?: string | null;
+  origin?: string | null;
+  destination?: string | null;
+  distanceKm?: number;
+  distance_km?: number;
   status: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
+  stops?: RouteStopItem[];
 }
 
 export interface CreateRoutePayload {
   name: string;
-  route_code: string;
+  routeCode: string;
+  description?: string;
+  origin?: string;
+  destination?: string;
+  distanceKm?: number;
+  status?: string;
+  stops?: Array<{ stopId: number; stopOrder: number }>;
 }
 
 export async function fetchRoutes(): Promise<Route[]> {
@@ -38,6 +59,6 @@ export async function deleteRoute(id: number): Promise<void> {
   await client.delete(`/admin/routes/${id}`);
 }
 
-export async function setRouteStops(routeId: number, stopIds: number[]): Promise<void> {
-  await client.post(`/admin/routes/${routeId}/stops`, { stop_ids: stopIds });
+export async function setRouteStops(routeId: number, stops: Array<{ stopId: number; stopOrder: number }>): Promise<void> {
+  await client.post(`/admin/routes/${routeId}/stops`, { stops });
 }

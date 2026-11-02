@@ -3,19 +3,25 @@ import client from './client';
 export interface Stop {
   id: number;
   name: string;
-  stop_code: string;
+  stop_code?: string;
+  stopCode?: string;
   latitude: number;
   longitude: number;
+  address?: string | null;
   status: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
 }
 
 export interface CreateStopPayload {
   name: string;
-  stop_code: string;
+  stopCode: string;
   latitude: number;
   longitude: number;
+  address?: string;
+  status?: string;
 }
 
 export async function fetchStops(): Promise<Stop[]> {
