@@ -4,21 +4,43 @@ export interface Incident {
   id: number;
   type: string;
   description: string;
-  vehicle_id: number;
-  route_id: number;
-  status: string;
-  reported_by: number;
-  created_at: string;
-  updated_at: string;
+  severity: 'low' | 'medium' | 'high' | 'critical' | string;
+  status: 'reported' | 'under_investigation' | 'resolved' | 'dismissed' | string;
+  latitude?: number | null;
+  longitude?: number | null;
+  vehicleId?: number | null;
+  vehicle_id?: number | null;
+  routeId?: number | null;
+  route_id?: number | null;
+  reportedBy?: number;
+  reported_by?: number;
+  reportedByName?: string;
+  reportedByEmail?: string;
+  vehicleNumber?: string;
+  routeName?: string;
+  routeCode?: string;
+  adminNotes?: string | null;
+  admin_notes?: string | null;
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
 }
 
 export interface UpdateIncidentPayload {
-  status: string;
-  resolution?: string;
+  status?: string;
+  adminNotes?: string;
+  severity?: string;
+  description?: string;
 }
 
-export async function fetchIncidents(): Promise<Incident[]> {
-  const { data } = await client.get('/admin/incidents');
+export async function fetchIncidents(filters?: {
+  status?: string;
+  severity?: string;
+  type?: string;
+  vehicleId?: number;
+}): Promise<Incident[]> {
+  const { data } = await client.get('/admin/incidents', { params: filters });
   return data.data ?? data;
 }
 
